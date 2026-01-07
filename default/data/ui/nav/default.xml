@@ -1,0 +1,8 @@
+<nav color="#65A637">
+  <view name="trellix_epo_overview" default="true"/>
+  <collection label="Trellix ePO">
+    <view name="trellix_epo_overview"/>
+    <view name="trellix_epo_syslog_threats"/>
+  </collection>
+</nav>
+

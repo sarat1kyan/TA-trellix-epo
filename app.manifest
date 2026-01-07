@@ -1,0 +1,28 @@
+{
+  "schemaVersion": "1.0",
+  "info": {
+    "title": "Trellix ePO Technology Add-on",
+    "id": {
+      "group": "com.splunk.add-on",
+      "name": "TA-trellix-epo",
+      "version": "1.0.0"
+    },
+    "author": [
+      {
+        "name": "Splunk Add-on Developer",
+        "email": "developer@example.com"
+      }
+    ],
+    "releaseDate": "2024-01-01",
+    "description": "Technology Add-on for Trellix (McAfee) ePO - Ingests security telemetry and normalizes to CIM",
+    "classification": {
+      "intendedAudience": "Security Operations",
+      "categories": ["Security", "Endpoint Protection"],
+      "developmentStatus": "Production"
+    },
+    "license": {
+      "name": "Proprietary"
+    }
+  }
+}
+

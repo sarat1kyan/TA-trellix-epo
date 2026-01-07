@@ -1,0 +1,31 @@
+# Splunk-specific ignores
+local/
+*.log
+*.checkpoint
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+.Python
+*.so
+.DS_Store
+*.swp
+*.swo
+*~
+
+# IDE
+.vscode/
+.idea/
+*.sublime-project
+*.splunk
+
+# Secrets
+*.conf.local
+secrets.conf
+passwords.conf
+
+# Build artifacts
+*.tgz
+*.tar.gz
+*.spl
+

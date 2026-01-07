@@ -1,0 +1,19 @@
+[]
+access = read : [ * ], write : [ admin ]
+export = system
+
+[default/app]
+export = system
+
+[default/inputs]
+export = system
+
+[default/props]
+export = system
+
+[default/transforms]
+export = system
+
+[default/restmap]
+export = system
+

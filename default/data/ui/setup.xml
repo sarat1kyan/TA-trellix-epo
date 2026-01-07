@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<setup page="configure">
+  <title>Configure Trellix ePO Add-on</title>
+  <subtitle>Configure connection settings for Trellix (McAfee) ePO server</subtitle>
+  
+  <fieldset>
+    <title>ePO Server Configuration</title>
+    
+    <field>
+      <label>ePO Server URL</label>
+      <type>text</type>
+      <name>epo_url</name>
+      <required>true</required>
+      <tooltip>Enter the hostname or IP address of your Trellix ePO server (e.g., epo.example.com)</tooltip>
+    </field>
+    
+    <field>
+      <label>ePO Server Port</label>
+      <type>text</type>
+      <name>epo_port</name>
+      <default>8443</default>
+      <required>false</required>
+      <tooltip>Port for ePO server (default: 8443 for HTTPS)</tooltip>
+    </field>
+    
+    <field>
+      <label>Use SSL/TLS</label>
+      <type>checkbox</type>
+      <name>use_ssl</name>
+      <default>true</default>
+      <tooltip>Enable SSL/TLS encryption for communication with ePO server</tooltip>
+    </field>
+    
+    <field>
+      <label>Verify SSL Certificate</label>
+      <type>checkbox</type>
+      <name>ssl_verify</name>
+      <default>true</default>
+      <tooltip>Verify SSL certificate (disable only for self-signed certificates in test environments)</tooltip>
+    </field>
+  </fieldset>
+  
+  <fieldset>
+    <title>Authentication</title>
+    
+    <field>
+      <label>Authentication Method</label>
+      <type>dropdown</type>
+      <name>auth_method</name>
+      <default>password</default>
+      <options>
+        <option label="Username/Password">password</option>
+        <option label="Token">token</option>
+      </options>
+      <tooltip>Select authentication method: Username/Password or Token</tooltip>
+    </field>
+    
+    <field>
+      <label>ePO Username</label>
+      <type>text</type>
+      <name>epo_username</name>
+      <required>true</required>
+      <tooltip>Username for ePO authentication (stored securely in Splunk)</tooltip>
+    </field>
+    
+    <field>
+      <label>ePO Password</label>
+      <type>password</type>
+      <name>epo_password</name>
+      <required>true</required>
+      <tooltip>Password for ePO authentication (stored securely in Splunk encrypted storage)</tooltip>
+    </field>
+    
+    <field>
+      <label>ePO Token (Optional)</label>
+      <type>password</type>
+      <name>epo_token</name>
+      <required>false</required>
+      <tooltip>Pre-existing ePO authentication token (optional, used if auth method is Token)</tooltip>
+    </field>
+  </fieldset>
+  
+  <fieldset>
+    <title>Data Collection Settings</title>
+    
+    <field>
+      <label>Default Polling Interval (seconds)</label>
+      <type>text</type>
+      <name>polling_interval</name>
+      <default>300</default>
+      <required>false</required>
+      <tooltip>How often to poll ePO for new data (default: 300 seconds = 5 minutes)</tooltip>
+    </field>
+    
+    <field>
+      <label>Default Batch Size</label>
+      <type>text</type>
+      <name>batch_size</name>
+      <default>1000</default>
+      <required>false</required>
+      <tooltip>Maximum number of events to retrieve per polling cycle (default: 1000)</tooltip>
+    </field>
+    
+    <field>
+      <label>Default Index</label>
+      <type>text</type>
+      <name>default_index</name>
+      <default>main</default>
+      <required>false</required>
+      <tooltip>Default Splunk index for ePO events (can be overridden per input)</tooltip>
+    </field>
+    
+    <field>
+      <label>Enable Incremental Collection</label>
+      <type>checkbox</type>
+      <name>incremental_collection</name>
+      <default>true</default>
+      <tooltip>Enable checkpoint-based incremental collection to avoid duplicate events</tooltip>
+    </field>
+  </fieldset>
+  
+  <fieldset>
+    <title>Proxy Settings (Optional)</title>
+    
+    <field>
+      <label>Use Proxy</label>
+      <type>checkbox</type>
+      <name>use_proxy</name>
+      <default>false</default>
+      <tooltip>Enable proxy server for ePO connections</tooltip>
+    </field>
+    
+    <field>
+      <label>Proxy Server</label>
+      <type>text</type>
+      <name>proxy_server</name>
+      <required>false</required>
+      <tooltip>Proxy server address (e.g., proxy.example.com:8080)</tooltip>
+    </field>
+    
+    <field>
+      <label>Proxy Username</label>
+      <type>text</type>
+      <name>proxy_username</name>
+      <required>false</required>
+      <tooltip>Username for proxy authentication (if required)</tooltip>
+    </field>
+    
+    <field>
+      <label>Proxy Password</label>
+      <type>password</type>
+      <name>proxy_password</name>
+      <required>false</required>
+      <tooltip>Password for proxy authentication (if required)</tooltip>
+    </field>
+  </fieldset>
+  
+  <fieldset>
+    <title>Advanced Settings</title>
+    
+    <field>
+      <label>Checkpoint Directory</label>
+      <type>text</type>
+      <name>checkpoint_dir</name>
+      <required>false</required>
+      <tooltip>Directory to store checkpoints for incremental collection (default: ~/.splunk/checkpoints/TA-trellix-epo)</tooltip>
+    </field>
+    
+    <field>
+      <label>Request Timeout (seconds)</label>
+      <type>text</type>
+      <name>request_timeout</name>
+      <default>60</default>
+      <required>false</required>
+      <tooltip>Timeout for API requests to ePO server (default: 60 seconds)</tooltip>
+    </field>
+    
+    <field>
+      <label>Retry Attempts</label>
+      <type>text</type>
+      <name>retry_attempts</name>
+      <default>3</default>
+      <required>false</required>
+      <tooltip>Number of retry attempts for failed API requests (default: 3)</tooltip>
+    </field>
+  </fieldset>
+  
+  <fieldset>
+    <title>Connection Test</title>
+    <description>Test your ePO connection settings before saving</description>
+    
+    <field>
+      <label>Test Connection</label>
+      <type>link</type>
+      <name>test_connection</name>
+      <href>javascript:void(0);</href>
+      <tooltip>Click to test connection to ePO server with current settings</tooltip>
+    </field>
+  </fieldset>
+  
+  <validations>
+    <validation name="epo_url">
+      <message>ePO Server URL is required</message>
+      <condition>isnull($epo_url$)</condition>
+    </validation>
+    <validation name="epo_username">
+      <message>ePO Username is required</message>
+      <condition>isnull($epo_username$)</condition>
+    </validation>
+    <validation name="epo_password">
+      <message>ePO Password is required when using password authentication</message>
+      <condition>$auth_method$ == "password" AND isnull($epo_password$)</condition>
+    </validation>
+    <validation name="polling_interval">
+      <message>Polling interval must be a positive number</message>
+      <condition>isnotnull($polling_interval$) AND $polling_interval$ &lt;= 0</condition>
+    </validation>
+  </validations>
+</setup>
+
