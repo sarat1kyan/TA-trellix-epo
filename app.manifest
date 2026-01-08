@@ -3,7 +3,6 @@
   "info": {
     "title": "Trellix ePO Technology Add-on",
     "id": {
-      "group": "com.splunk.add-on",
       "name": "TA-trellix-epo",
       "version": "1.0.0"
     },
@@ -25,4 +24,3 @@
     }
   }
 }
-
