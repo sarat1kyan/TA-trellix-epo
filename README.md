@@ -1,6 +1,12 @@
+<div align="center">
+
 # Trellix (McAfee) ePO Splunk Technology Add-on
 
+<img width="1536" height="1024" alt="IMG_0189" src="https://github.com/user-attachments/assets/a6336c60-7846-489d-8d57-c4fff8487cc4" />
+
 Non official Splunk Technology Add-on for integrating Trellix (McAfee) ePO security telemetry into Splunk. This add-on provides comprehensive data collection, CIM normalization, and a powerful all-in-one security dashboard.
+
+</div>
 
 ## 📋 Table of Contents
 
