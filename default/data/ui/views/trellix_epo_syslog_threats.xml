@@ -196,7 +196,7 @@
       <chart>
         <search>
           <query>index=$index_filter$ sourcetype=$sourcetype_filter$ $keyword_filter$
-| timechart span=auto count as "Events"</query>
+| timechart count as "Events"</query>
           <earliest>$time_range.earliest$</earliest>
           <latest>$time_range.latest$</latest>
         </search>
