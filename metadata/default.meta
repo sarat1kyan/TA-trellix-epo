@@ -28,10 +28,19 @@ export = system
 export = system
 
 [admin:ta_trellix_epo]
-access = read : [ admin, sc_admin ], write : [ admin ]
+access = read : [ admin, sc_admin ], write : [ admin, sc_admin ]
+export = system
+
+[admin_external:ta_trellix_epo_settings]
+access = read : [ admin, sc_admin ], write : [ admin, sc_admin ]
+export = system
+
+[admin_external:ta_trellix_epo_inputs]
+access = read : [ admin, sc_admin ], write : [ admin, sc_admin ]
+export = system
 
 [ta_trellix_epo_settings]
-access = read : [ admin, sc_admin ], write : [ admin ]
+access = read : [ admin, sc_admin ], write : [ admin, sc_admin ]
 export = none
 
 [views]
@@ -39,7 +48,3 @@ export = system
 
 [nav]
 export = system
-
-[data/ui/setup]
-access = read : [ * ], write : [ admin ]
-export = none

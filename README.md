@@ -3,7 +3,7 @@
 # Trellix (McAfee) ePO Splunk Technology Add-on
 
 [![Splunkbase](https://img.shields.io/badge/Splunkbase-Trellix%20ePO%20All%20in%20One-green?logo=splunk)](https://splunkbase.splunk.com/app/8351)
-[![Version](https://img.shields.io/badge/Version-1.1.0-blue)](https://github.com/sarat1kyan/TA-trellix-epo/releases)
+[![Version](https://img.shields.io/badge/Version-1.1.2-blue)](https://github.com/sarat1kyan/TA-trellix-epo/releases)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 [![CIM](https://img.shields.io/badge/CIM-4.x%20|%205.x%20|%206.x-orange)](https://docs.splunk.com/Documentation/CIM)
 
@@ -652,6 +652,18 @@ This add-on is developed and maintained by **Mher Saratikyan**.
 This Technology Add-on is provided as-is. Please review your organization's policies regarding third-party add-ons.
 
 ## 🔄 Version History
+
+### Version 1.1.2 (2026-01-13)
+- **New Setup Page** - Beautiful dashboard-based configuration guide
+- **Fixed 404 errors** - Replaced legacy setup.xml with proper dashboard view
+- **Improved navigation** - Direct links to setup and configuration
+- See [CHANGELOG.md](CHANGELOG.md) for full details
+
+### Version 1.1.1 (2026-01-13)
+- **Bug Fix** - Fixed 404 error on Setup page
+- **Fixed setup.xml** - Corrected REST endpoint paths and input types
+- **Fixed REST handler** - Added all configuration fields support
+- See [CHANGELOG.md](CHANGELOG.md) for full details
 
 ### Version 1.1.0 (2026-01-13)
 - **Full CIM Compliance** - Added eventtypes.conf and tags.conf for complete data model integration

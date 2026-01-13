@@ -5,7 +5,7 @@
     "id": {
       "group": null,
       "name": "TA-trellix-epo",
-      "version": "1.1.0"
+      "version": "1.1.2"
     },
     "author": [
       {
@@ -34,7 +34,7 @@
     "releaseNotes": {
       "name": "Release Notes",
       "text": null,
-      "uri": "https://github.com/sarat1kyan/TA-trellix-epo/releases/tag/v1.1.0"
+      "uri": "https://github.com/sarat1kyan/TA-trellix-epo/releases/tag/v1.1.2"
     }
   },
   "dependencies": null,

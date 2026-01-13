@@ -1,0 +1,272 @@
+<dashboard version="1.1" theme="dark">
+  <label>Configure Trellix ePO Add-on</label>
+  <description>Configure connection settings for Trellix (McAfee) ePO server</description>
+  
+  <row>
+    <html>
+      <style>
+        .setup-container { 
+          max-width: 800px; 
+          margin: 0 auto; 
+          padding: 20px;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        .setup-section {
+          background: #21262d;
+          border: 1px solid #30363d;
+          border-radius: 12px;
+          padding: 24px;
+          margin-bottom: 20px;
+        }
+        .setup-section h2 {
+          color: #58a6ff;
+          margin-top: 0;
+          padding-bottom: 12px;
+          border-bottom: 1px solid #30363d;
+          font-size: 1.3em;
+        }
+        .setup-section h3 {
+          color: #c9d1d9;
+          margin-top: 16px;
+          font-size: 1.1em;
+        }
+        .info-box {
+          background: #0d1117;
+          border-left: 4px solid #238636;
+          padding: 16px;
+          margin: 16px 0;
+          border-radius: 4px;
+        }
+        .warning-box {
+          background: #0d1117;
+          border-left: 4px solid #d29922;
+          padding: 16px;
+          margin: 16px 0;
+          border-radius: 4px;
+        }
+        .code-block {
+          background: #161b22;
+          border: 1px solid #30363d;
+          border-radius: 6px;
+          padding: 12px 16px;
+          font-family: 'SFMono-Regular', Consolas, monospace;
+          font-size: 13px;
+          overflow-x: auto;
+          margin: 12px 0;
+          color: #79c0ff;
+        }
+        .step-list {
+          counter-reset: steps;
+          list-style: none;
+          padding-left: 0;
+        }
+        .step-list li {
+          counter-increment: steps;
+          padding: 12px 0 12px 48px;
+          position: relative;
+          border-bottom: 1px solid #21262d;
+        }
+        .step-list li:before {
+          content: counter(steps);
+          position: absolute;
+          left: 0;
+          top: 12px;
+          width: 28px;
+          height: 28px;
+          background: #238636;
+          border-radius: 50%;
+          text-align: center;
+          line-height: 28px;
+          font-weight: bold;
+          color: white;
+        }
+        .btn-primary {
+          background: #238636;
+          color: white;
+          border: none;
+          padding: 10px 20px;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 14px;
+          margin: 8px 8px 8px 0;
+        }
+        .btn-primary:hover {
+          background: #2ea043;
+        }
+        .btn-secondary {
+          background: #21262d;
+          color: #c9d1d9;
+          border: 1px solid #30363d;
+          padding: 10px 20px;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 14px;
+          margin: 8px 8px 8px 0;
+        }
+        .config-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 16px 0;
+        }
+        .config-table th, .config-table td {
+          padding: 12px;
+          text-align: left;
+          border-bottom: 1px solid #30363d;
+        }
+        .config-table th {
+          background: #161b22;
+          color: #58a6ff;
+          font-weight: 600;
+        }
+      </style>
+      
+      <div class="setup-container">
+        
+        <div class="setup-section">
+          <h2>🔧 Configuration Overview</h2>
+          <p>This add-on requires configuration to connect to your Trellix (McAfee) ePO server. Follow the steps below to complete the setup.</p>
+          
+          <div class="info-box">
+            <strong>ℹ️ Configuration Files Location:</strong><br/>
+            Settings are stored in <code>$SPLUNK_HOME/etc/apps/TA-trellix-epo/local/</code>
+          </div>
+        </div>
+        
+        <div class="setup-section">
+          <h2>📋 Step 1: Configure ePO Server Settings</h2>
+          <p>Edit the settings configuration file to specify your ePO server details:</p>
+          
+          <h3>Create/Edit Configuration File</h3>
+          <div class="code-block">
+# Copy template to local directory<br/>
+cp $SPLUNK_HOME/etc/apps/TA-trellix-epo/default/ta_trellix_epo_settings.conf \<br/>
+   $SPLUNK_HOME/etc/apps/TA-trellix-epo/local/ta_trellix_epo_settings.conf
+          </div>
+          
+          <h3>Edit the [general] Section</h3>
+          <div class="code-block">
+[general]<br/>
+epo_server = your-epo-server.company.com<br/>
+epo_port = 8443<br/>
+username = your_epo_username<br/>
+use_ssl = 1<br/>
+verify_ssl = 1<br/>
+polling_interval = 300<br/>
+batch_size = 1000<br/>
+timeout = 30<br/>
+retry_attempts = 3<br/>
+log_level = INFO
+          </div>
+          
+          <table class="config-table">
+            <tr><th>Setting</th><th>Description</th><th>Default</th></tr>
+            <tr><td>epo_server</td><td>ePO server hostname or IP address</td><td>(required)</td></tr>
+            <tr><td>epo_port</td><td>ePO server port</td><td>8443</td></tr>
+            <tr><td>username</td><td>ePO API username</td><td>(required)</td></tr>
+            <tr><td>use_ssl</td><td>Enable SSL/TLS (1=yes, 0=no)</td><td>1</td></tr>
+            <tr><td>verify_ssl</td><td>Verify SSL certificate (1=yes, 0=no)</td><td>1</td></tr>
+            <tr><td>polling_interval</td><td>Default data collection interval (seconds)</td><td>300</td></tr>
+            <tr><td>batch_size</td><td>Number of records per API call</td><td>1000</td></tr>
+            <tr><td>timeout</td><td>API request timeout (seconds)</td><td>30</td></tr>
+            <tr><td>retry_attempts</td><td>Number of retry attempts on failure</td><td>3</td></tr>
+            <tr><td>log_level</td><td>Logging level (DEBUG, INFO, WARNING, ERROR)</td><td>INFO</td></tr>
+          </table>
+        </div>
+        
+        <div class="setup-section">
+          <h2>🔐 Step 2: Configure Password Securely</h2>
+          <p>Store your ePO password securely using Splunk's encrypted credential storage:</p>
+          
+          <div class="warning-box">
+            <strong>⚠️ Important:</strong> Never store passwords in plain text configuration files. Use the secure credential storage method below.
+          </div>
+          
+          <h3>Run the Credential Configuration Script</h3>
+          <div class="code-block">
+# Windows<br/>
+cd %SPLUNK_HOME%\bin<br/>
+splunk cmd python ..\etc\apps\TA-trellix-epo\bin\configure_credentials.py<br/>
+<br/>
+# Linux/Mac<br/>
+cd $SPLUNK_HOME/bin<br/>
+./splunk cmd python ../etc/apps/TA-trellix-epo/bin/configure_credentials.py
+          </div>
+          
+          <p>The script will prompt you to enter:</p>
+          <ol class="step-list">
+            <li>Your ePO username (must match the username in settings)</li>
+            <li>Your ePO password (input will be hidden)</li>
+            <li>Confirm the password</li>
+          </ol>
+        </div>
+        
+        <div class="setup-section">
+          <h2>📥 Step 3: Enable Data Inputs</h2>
+          <p>Configure which data sources to collect from ePO:</p>
+          
+          <h3>Create Local Inputs Configuration</h3>
+          <div class="code-block">
+# Copy template to local directory<br/>
+cp $SPLUNK_HOME/etc/apps/TA-trellix-epo/default/inputs.conf \<br/>
+   $SPLUNK_HOME/etc/apps/TA-trellix-epo/local/inputs.conf
+          </div>
+          
+          <h3>Enable Desired Inputs</h3>
+          <p>Edit <code>local/inputs.conf</code> and change <code>disabled = 1</code> to <code>disabled = 0</code> for the inputs you want to enable:</p>
+          
+          <div class="code-block">
+[trellix_epo://threat_events]<br/>
+disabled = 0<br/>
+interval = 300<br/>
+index = main<br/>
+<br/>
+[trellix_epo://malware_detections]<br/>
+disabled = 0<br/>
+interval = 300<br/>
+index = main
+          </div>
+          
+          <table class="config-table">
+            <tr><th>Input</th><th>Description</th><th>Recommended Interval</th></tr>
+            <tr><td>threat_events</td><td>Security threat events and detections</td><td>300s (5 min)</td></tr>
+            <tr><td>malware_detections</td><td>Malware detection events</td><td>300s (5 min)</td></tr>
+            <tr><td>host_status</td><td>Endpoint protection status</td><td>600s (10 min)</td></tr>
+            <tr><td>agent_status</td><td>ePO agent status information</td><td>600s (10 min)</td></tr>
+            <tr><td>policy_compliance</td><td>Policy compliance data</td><td>900s (15 min)</td></tr>
+            <tr><td>quarantine_events</td><td>Quarantine actions</td><td>300s (5 min)</td></tr>
+            <tr><td>user_actions</td><td>ePO user activity logs</td><td>900s (15 min)</td></tr>
+            <tr><td>dat_updates</td><td>DAT/signature update status</td><td>3600s (1 hour)</td></tr>
+          </table>
+        </div>
+        
+        <div class="setup-section">
+          <h2>🔄 Step 4: Restart Splunk</h2>
+          <p>After completing the configuration, restart Splunk to apply changes:</p>
+          
+          <div class="code-block">
+# Windows<br/>
+%SPLUNK_HOME%\bin\splunk restart<br/>
+<br/>
+# Linux/Mac<br/>
+$SPLUNK_HOME/bin/splunk restart
+          </div>
+          
+          <div class="info-box">
+            <strong>✅ Verification:</strong> After restart, check <code>Settings → Data inputs → Trellix ePO</code> to verify your inputs are running.
+          </div>
+        </div>
+        
+        <div class="setup-section">
+          <h2>🔗 Quick Links</h2>
+          <p>
+            <a href="/manager/TA-trellix-epo/data/inputs/trellix_epo" class="btn-primary">Manage Data Inputs</a>
+            <a href="/app/TA-trellix-epo/trellix_epo_overview" class="btn-primary">View Dashboard</a>
+            <a href="/app/TA-trellix-epo/search" class="btn-secondary">Search Data</a>
+            <a href="https://github.com/sarat1kyan/TA-trellix-epo" target="_blank" class="btn-secondary">Documentation</a>
+          </p>
+        </div>
+        
+      </div>
+    </html>
+  </row>
+</dashboard>

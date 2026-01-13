@@ -8,6 +8,51 @@ All notable changes to the **TA-Trellix-EPO Add-on** will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.2] - 2026-01-13
+
+### Added
+
+#### New Dashboard-Based Setup Page
+- **setup_page.xml** - Beautiful, comprehensive configuration guide dashboard
+  - Step-by-step setup instructions with code examples
+  - Configuration parameter reference tables
+  - Secure credential storage guide
+  - Data input configuration documentation
+  - Quick links to manage inputs, view dashboard, and documentation
+  - Modern dark theme with professional styling
+
+### Changed
+- **app.conf** - Updated `setup_view = setup_page` to point to new dashboard view
+- **default.xml** (navigation) - Added "Setup Guide" link to Configuration menu
+- **Removed legacy setup.xml** - Replaced with modern dashboard-based approach
+
+### Fixed
+- **404 error on Setup page** - The previous fix removed `setup_view` entirely, which also removed the setup button
+- **Navigation "Configure Settings" 404** - Was linking to `/app/TA-trellix-epo/setup` which didn't exist
+- **App Manager Setup button** - Now properly opens the setup_page dashboard
+
+---
+
+## [1.1.1] - 2026-01-13
+
+### Fixed
+
+#### Setup Page 404 Error
+- **Removed `setup_view = setup`** from `app.conf` - This was pointing to a non-existent dashboard view instead of using the legacy setup.xml
+- **Fixed setup.xml endpoint paths** - Changed endpoints from `ta_trellix_epo/ta_trellix_epo_settings/general` to `admin/ta_trellix_epo/ta_trellix_epo_settings` to match the restmap.conf admin handler registration
+- **Fixed setup.xml input types** - Changed `checkbox` to `bool` and `dropdown` to `list` per Splunk's setup.xml schema
+- **Updated REST handler** - Added all missing fields (use_ssl, polling_interval, batch_size, retry_attempts, proxy settings) to support the complete setup form
+
+#### REST API Configuration
+- **Fixed restmap.conf** - Changed `handlerpersistent` to `handlerpersistentmode` per Splunk's current schema
+- **Enhanced metadata permissions** - Added proper export and access permissions for admin handlers
+
+### Changed
+- **ta_trellix_epo_rh_settings.py** - Refactored to support all configuration fields with proper default values
+- **default.meta** - Updated permissions for admin_external handlers
+
+---
+
 ## [1.1.0] - 2026-01-13
 
 ### Added
@@ -195,5 +240,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+[1.1.2]: https://github.com/sarat1kyan/TA-trellix-epo/releases/tag/v1.1.2
+[1.1.1]: https://github.com/sarat1kyan/TA-trellix-epo/releases/tag/v1.1.1
 [1.1.0]: https://github.com/sarat1kyan/TA-trellix-epo/releases/tag/v1.1.0
 [1.0.0]: https://github.com/sarat1kyan/TA-trellix-epo/releases/tag/v1.0.0

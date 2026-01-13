@@ -3,7 +3,7 @@
 ```
 TA-trellix-epo/
 │
-├── app.manifest                          # App manifest metadata (v1.1.0)
+├── app.manifest                          # App manifest metadata (v1.1.2)
 ├── CHANGELOG.md                          # Version history and release notes
 ├── README.md                             # Comprehensive documentation
 ├── STRUCTURE.md                          # This file
@@ -31,10 +31,10 @@ TA-trellix-epo/
 │   │
 │   └── data/                             # UI and view data
 │       └── ui/
-│           ├── setup.xml                 # Setup/configuration UI
 │           ├── nav/
 │           │   └── default.xml           # Navigation menu configuration
 │           └── views/
+│               ├── setup_page.xml                 # Setup/configuration guide dashboard
 │               ├── trellix_epo_overview.xml       # Security Command Center
 │               └── trellix_epo_syslog_threats.xml # Syslog threat dashboard
 │
@@ -58,7 +58,7 @@ TA-trellix-epo/
 
 - **Python Scripts**: 7 files (3 main + 2 REST handlers + 1 utility + 1 credential tool)
 - **Configuration Files**: 8 files (app, inputs, settings, props, transforms, restmap, eventtypes, tags)
-- **XML Files**: 4 files (setup, navigation, 2 dashboards)
+- **XML Files**: 4 files (navigation, 3 dashboards including setup)
 - **CSS Files**: 1 file (custom dashboard styling)
 - **Documentation**: 3 files (README, STRUCTURE, CHANGELOG)
 - **Spec Files**: 2 files (settings spec, inputs spec)

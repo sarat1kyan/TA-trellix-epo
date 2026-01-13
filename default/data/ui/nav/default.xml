@@ -5,8 +5,8 @@
     <view name="trellix_epo_syslog_threats" label="Syslog Threat Events"/>
   </collection>
   <collection label="Configuration">
+    <view name="setup_page" label="Setup Guide"/>
     <a href="/manager/TA-trellix-epo/data/inputs/trellix_epo">Manage Inputs</a>
-    <a href="/app/TA-trellix-epo/setup">Configure Settings</a>
   </collection>
   <collection label="Resources">
     <a href="https://github.com/sarat1kyan/TA-trellix-epo" target="_blank">Documentation</a>
