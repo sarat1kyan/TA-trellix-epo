@@ -3,6 +3,19 @@
 """
 Trellix ePO Modular Input for Splunk
 Main entry point for data collection from Trellix ePO REST API
+
+This modular input connects to Trellix (McAfee) ePO servers via REST API
+and collects security telemetry for ingestion into Splunk.
+
+Supported data types:
+- threat_events: Threat detection events
+- malware_detections: Malware detection events
+- host_status: System host status information
+- agent_status: ePO agent status information
+- policy_compliance: Policy compliance violations
+- quarantine_events: Quarantine-related events
+- updates: DAT update information
+- user_actions: User action audit logs
 """
 
 import sys
@@ -11,34 +24,39 @@ import json
 import logging
 import time
 import traceback
+import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 
-# Add lib directory to path
+# Add bin directory to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
 
 # Splunk libraries
-from splunklib.modularinput import Script, Scheme, Argument, EventWriter
-from splunklib.modularinput.event import Event, XMLEventWriter
-from splunklib.binding import connect
+try:
+    from splunklib.modularinput import Script, Scheme, Argument, EventWriter
+    from splunklib.modularinput.event import Event
+    from splunklib.binding import connect
+except ImportError:
+    # Fallback for older Splunk versions
+    pass
 
 # Import our modules
 try:
     from trellix_epo_auth import TrellixEPOAuth, TrellixEPOAuthError
     from trellix_epo_client import TrellixEPOClient, TrellixEPOClientError
 except ImportError as e:
-    logging.error(f"Failed to import modules: {str(e)}")
+    logging.error(f"Failed to import Trellix ePO modules: {str(e)}")
     raise
 
-# Configure logging
+# Configure logging - send to stderr for Splunk to capture
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+    format='%(asctime)s level=%(levelname)s app=TA-trellix-epo %(name)s: %(message)s',
     handlers=[
         logging.StreamHandler(sys.stderr)
     ]
 )
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('trellix_epo_input')
 
 
 class TrellixEPOInput(Script):
@@ -199,27 +217,86 @@ class TrellixEPOInput(Script):
                 logger.error(error_msg)
                 ew.log(EventWriter.ERROR, error_msg)
     
-    def _collect_events(self, input_name, input_item, ew):
-        """Collect events for a specific input"""
+    def _load_global_settings(self, session_key):
+        """
+        Load global settings from ta_trellix_epo_settings.conf
         
-        # Parse configuration
+        Args:
+            session_key: Splunk session key for API access
+            
+        Returns:
+            Dictionary with global settings
+        """
+        settings = {
+            'epo_server': '',
+            'epo_port': 8443,
+            'username': '',
+            'verify_ssl': True,
+            'use_ssl': True,
+            'timeout': 60,
+            'retry_attempts': 3,
+            'batch_size': 1000,
+            'polling_interval': 300,
+            'log_level': 'INFO'
+        }
+        
+        try:
+            # Try to read from conf file using Splunk's bundled config reader
+            import splunk.clilib.cli_common as cli_common
+            conf = cli_common.getConfStanza('ta_trellix_epo_settings', 'general')
+            
+            if conf:
+                settings['epo_server'] = conf.get('epo_server', settings['epo_server'])
+                settings['epo_port'] = int(conf.get('epo_port', settings['epo_port']))
+                settings['username'] = conf.get('username', settings['username'])
+                settings['verify_ssl'] = str(conf.get('verify_ssl', 'true')).lower() == 'true'
+                settings['use_ssl'] = str(conf.get('use_ssl', 'true')).lower() == 'true'
+                settings['timeout'] = int(conf.get('timeout', settings['timeout']))
+                settings['retry_attempts'] = int(conf.get('retry_attempts', settings['retry_attempts']))
+                settings['batch_size'] = int(conf.get('batch_size', settings['batch_size']))
+                settings['polling_interval'] = int(conf.get('polling_interval', settings['polling_interval']))
+                settings['log_level'] = conf.get('log_level', settings['log_level'])
+                
+        except Exception as e:
+            logger.warning(f"Could not load global settings: {str(e)}. Using defaults.")
+        
+        return settings
+    
+    def _collect_events(self, input_name, input_item, ew):
+        """
+        Collect events for a specific input
+        
+        Args:
+            input_name: Name of the modular input
+            input_item: Input configuration dictionary
+            ew: EventWriter for writing events to Splunk
+        """
+        session_key = self._get_session_key()
+        
+        # Load global settings from settings conf
+        global_settings = self._load_global_settings(session_key)
+        
+        # Parse input-specific configuration (overrides global settings)
         config = input_item
         input_type = config.get('input_type', '')
-        epo_url = config.get('epo_url', '')
-        epo_port = int(config.get('epo_port', 8443))
-        epo_username = config.get('epo_username', '')
+        
+        # ePO connection settings (prefer input-specific, fall back to global)
+        epo_url = config.get('epo_url') or global_settings['epo_server']
+        epo_port = int(config.get('epo_port') or global_settings['epo_port'])
+        epo_username = config.get('epo_username') or global_settings['username']
         epo_password = config.get('epo_password', '')
         epo_token = config.get('epo_token', '')
-        ssl_verify = str(config.get('ssl_verify', 'true')).lower() == 'true'
+        ssl_verify = str(config.get('ssl_verify', str(global_settings['verify_ssl']))).lower() == 'true'
         
-        polling_interval = int(config.get('polling_interval', 300))  # Default 5 minutes
-        batch_size = int(config.get('batch_size', 1000))
+        # Collection settings
+        polling_interval = int(config.get('polling_interval') or global_settings['polling_interval'])
+        batch_size = int(config.get('batch_size') or global_settings['batch_size'])
         
+        # Output settings
         index = config.get('index', 'main')
         sourcetype = config.get('sourcetype', f'trellix_epo:{input_type}')
         
         checkpoint_dir = config.get('checkpoint_dir', '')
-        session_key = self._get_session_key()
         
         # Initialize authentication
         try:
@@ -388,16 +465,33 @@ class TrellixEPOInput(Script):
             return event
     
     def _get_session_key(self):
-        """Get Splunk session key"""
+        """
+        Get Splunk session key from input XML.
+        
+        For modular inputs, Splunk passes configuration via stdin as XML.
+        The session_key is embedded in this XML structure.
+        
+        Returns:
+            Session key string or None if not available
+        """
         try:
-            # Try to get from environment
+            # Try to get from environment first
             session_key = os.environ.get('SPLUNK_SESSION_KEY')
             if session_key:
                 return session_key
             
-            # Try to read from stdin (for modular inputs)
-            return sys.stdin.read()
-        except:
+            # For modular inputs, session key comes from the parent Script class
+            # Try to access it from the input definition
+            if hasattr(self, '_input_definition') and self._input_definition:
+                if hasattr(self._input_definition, 'metadata'):
+                    return self._input_definition.metadata.get('session_key')
+            
+            # Fallback: parse from stdin if needed (for standalone testing)
+            # Note: stdin is already consumed by splunklib during normal operation
+            return None
+            
+        except Exception as e:
+            logger.warning(f"Could not get session key: {str(e)}")
             return None
     
     def _get_checkpoint_file(self, checkpoint_dir, input_name):

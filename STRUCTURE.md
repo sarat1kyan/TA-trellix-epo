@@ -3,95 +3,137 @@
 ```
 TA-trellix-epo/
 │
-├── app.manifest                          # App manifest metadata
+├── app.manifest                          # App manifest metadata (v1.1.0)
+├── CHANGELOG.md                          # Version history and release notes
 ├── README.md                             # Comprehensive documentation
+├── STRUCTURE.md                          # This file
 ├── requirements.txt                      # Python dependencies
-├── .gitignore                           # Git ignore patterns
 │
 ├── bin/                                  # Python scripts directory
-│   ├── trellix_epo_input.py            # Main modular input (Splunk entry point)
-│   ├── trellix_epo_client.py           # REST API client for ePO
-│   ├── trellix_epo_auth.py             # Authentication handler
-│   └── utils/                           # Utility functions
-│       └── __init__.py                  # Utils package init
+│   ├── trellix_epo_input.py             # Main modular input (Splunk entry point)
+│   ├── trellix_epo_client.py            # REST API client for ePO
+│   ├── trellix_epo_auth.py              # Authentication handler
+│   ├── configure_credentials.py          # Credential storage utility
+│   ├── ta_trellix_epo_rh_settings.py    # REST handler for settings
+│   ├── ta_trellix_epo_rh_inputs.py      # REST handler for inputs
+│   └── utils/                            # Utility functions
+│       └── __init__.py                   # Utils package with helpers
 │
 ├── default/                              # Default configuration directory
-│   ├── app.conf                         # App configuration
-│   ├── inputs.conf                      # Input definitions template
-│   ├── props.conf                       # Field extractions and sourcetypes
-│   ├── transforms.conf                  # CIM normalization transforms
-│   ├── restmap.conf                     # REST endpoint mappings
+│   ├── app.conf                          # App configuration
+│   ├── inputs.conf                       # Input definitions (disabled by default)
+│   ├── ta_trellix_epo_settings.conf      # ePO server connection settings
+│   ├── props.conf                        # Field extractions and sourcetypes
+│   ├── transforms.conf                   # CIM normalization transforms
+│   ├── restmap.conf                      # REST endpoint mappings
+│   ├── eventtypes.conf                   # Event type definitions for CIM
+│   ├── tags.conf                         # Tag definitions for CIM data models
 │   │
-│   └── data/                            # UI and view data
+│   └── data/                             # UI and view data
 │       └── ui/
-│           ├── setup.xml                # Setup/configuration UI
+│           ├── setup.xml                 # Setup/configuration UI
 │           ├── nav/
-│           │   └── default.xml          # Navigation menu configuration
+│           │   └── default.xml           # Navigation menu configuration
 │           └── views/
-│               └── trellix_epo_overview.xml  # Main all-in-one dashboard
+│               ├── trellix_epo_overview.xml       # Security Command Center
+│               └── trellix_epo_syslog_threats.xml # Syslog threat dashboard
 │
-└── metadata/                             # Metadata directory
-    └── default.meta                      # Permissions and metadata
-
+│
+├── appserver/                            # Application server assets
+│   └── static/
+│       └── trellix_epo_dashboard.css     # Custom dashboard styling
+│
+├── static/                               # Static assets
+│   └── appIcon.png                       # App icon
+│
+├── metadata/                             # Metadata directory
+│   └── default.meta                      # Permissions and metadata
+│
+└── README/                               # Spec files
+    ├── ta_trellix_epo_settings.conf.spec # Settings configuration spec
+    └── inputs.conf.spec                  # Input configuration spec
 ```
 
 ## File Count Summary
 
-- **Python Scripts**: 4 files (3 main + 1 utils)
-- **Configuration Files**: 5 files
-- **XML Files**: 3 files (setup, navigation, dashboard)
-- **Documentation**: 2 files (README, STRUCTURE)
+- **Python Scripts**: 7 files (3 main + 2 REST handlers + 1 utility + 1 credential tool)
+- **Configuration Files**: 8 files (app, inputs, settings, props, transforms, restmap, eventtypes, tags)
+- **XML Files**: 4 files (setup, navigation, 2 dashboards)
+- **CSS Files**: 1 file (custom dashboard styling)
+- **Documentation**: 3 files (README, STRUCTURE, CHANGELOG)
+- **Spec Files**: 2 files (settings spec, inputs spec)
 - **Metadata**: 2 files (manifest, meta)
-- **Total**: 17 files
+- **Total**: ~26 files
 
-## Key Components
+## Key Features
 
-### Core Python Modules
-1. **trellix_epo_input.py** - Splunk modular input that orchestrates data collection
-2. **trellix_epo_client.py** - Handles all REST API interactions with ePO
-3. **trellix_epo_auth.py** - Manages secure authentication and credential storage
+### Data Collection (v1.1.0)
+✅ Threat Events - Real-time threat detection events  
+✅ Malware Detections - Malware identification and details  
+✅ Host Status - System health and status information  
+✅ Agent Status - ePO agent connectivity and versions  
+✅ Policy Compliance - Policy violations and compliance status  
+✅ Quarantine Events - Quarantine actions and file information  
+✅ Updates/DAT Versions - DAT update status and versions  
+✅ User Actions - Audit logs for user activities  
 
-### Configuration
-1. **app.conf** - Defines app metadata and settings
-2. **inputs.conf** - Input definitions (auto-configured)
-3. **props.conf** - Field extractions and sourcetype definitions
-4. **transforms.conf** - CIM normalization rules
-5. **restmap.conf** - REST API endpoint mappings
+### CIM Compliance
+✅ Full eventtypes.conf for event classification  
+✅ Full tags.conf for CIM data model mapping  
+✅ Intrusion_Detection data model  
+✅ Malware data model  
+✅ Endpoint data model  
+✅ Change data model  
+✅ Authentication data model  
 
-### User Interface
-1. **setup.xml** - Configuration UI for ePO connection settings
-2. **trellix_epo_overview.xml** - Comprehensive security dashboard
-3. **default.xml** - Navigation menu configuration
+### Dashboards
+✅ Security Command Center - Comprehensive threat overview  
+✅ Syslog Threat Events - For syslog-based threat data  
+✅ Interactive drilldowns  
+✅ Custom CSS styling  
+✅ Dark theme with GitHub-inspired colors  
 
-## Installation Instructions
+### Security Features
+✅ Encrypted credential storage  
+✅ Token-based and basic authentication  
+✅ SSL/TLS verification (configurable)  
+✅ Proxy support  
+✅ Rate limiting protection  
+✅ Automatic retry with exponential backoff  
 
-1. Copy entire `TA-trellix-epo` directory to `$SPLUNK_HOME/etc/apps/`
-2. Set executable permissions on Python files (Unix/Linux):
+## Installation
+
+### Option 1: Splunkbase (Recommended)
+1. Visit [https://splunkbase.splunk.com/app/8351](https://splunkbase.splunk.com/app/8351)
+2. Click **Download** or install via Splunk Web: Apps → Find More Apps → "Trellix ePO"
+3. Restart Splunk if prompted
+
+### Option 2: Manual Installation
+1. Copy `TA-trellix-epo` directory to `$SPLUNK_HOME/etc/apps/`
+2. Set executable permissions (Linux/macOS):
    ```bash
    chmod +x $SPLUNK_HOME/etc/apps/TA-trellix-epo/bin/*.py
    ```
 3. Restart Splunk
-4. Configure via Setup UI in Splunk Web
-5. Create data inputs for desired data sources
 
-## Quick Start
+### Post-Installation
+1. Configure via Setup UI: Apps → Trellix ePO Add-on → Set up
+2. Store credentials securely:
+   ```bash
+   $SPLUNK_HOME/bin/splunk cmd python $SPLUNK_HOME/etc/apps/TA-trellix-epo/bin/configure_credentials.py
+   ```
+3. Enable data inputs as needed
+4. Access the Security Command Center dashboard
 
-1. **Install**: Copy to Splunk apps directory
-2. **Configure**: Navigate to Apps → Trellix ePO Add-on → Set up
-3. **Setup**: Enter ePO connection details
-4. **Create Inputs**: Configure data collection inputs
-5. **View Dashboard**: Access "Trellix ePO Security Overview"
+## Supported Data Sources
 
-## Data Sources Supported
-
-✅ Threat Events  
-✅ Malware Detections  
-✅ Host Status  
-✅ Agent Status  
-✅ Policy Compliance  
-✅ Quarantine Events  
-✅ Updates/DAT Versions  
-✅ User Actions  
-
-All data sources are CIM-compliant and ready for Enterprise Security (ES) integration.
-
+| Input Type | Sourcetype | CIM Data Model | Recommended Interval |
+|------------|------------|----------------|---------------------|
+| threat_events | trellix_epo:threat_events | Intrusion_Detection | 300s (5min) |
+| malware_detections | trellix_epo:malware_detections | Malware | 300s (5min) |
+| host_status | trellix_epo:host_status | Endpoint | 3600s (1hr) |
+| agent_status | trellix_epo:agent_status | Endpoint | 3600s (1hr) |
+| policy_compliance | trellix_epo:policy_compliance | Change | 7200s (2hr) |
+| quarantine_events | trellix_epo:quarantine_events | Malware | 600s (10min) |
+| updates | trellix_epo:updates | Endpoint | 14400s (4hr) |
+| user_actions | trellix_epo:user_actions | Authentication | 600s (10min) |

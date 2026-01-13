@@ -1,26 +1,46 @@
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "2.0.0",
   "info": {
     "title": "Trellix ePO Technology Add-on",
     "id": {
+      "group": null,
       "name": "TA-trellix-epo",
-      "version": "1.0.0"
+      "version": "1.1.0"
     },
     "author": [
       {
-        "name": "Splunk Add-on Developer",
-        "email": "developer@example.com"
+        "name": "Mher Saratikyan",
+        "email": "mhersaratikyan@outlook.com",
+        "company": "Armenian Card CJSC"
       }
     ],
-    "releaseDate": "2024-01-01",
-    "description": "Technology Add-on for Trellix (McAfee) ePO - Ingests security telemetry and normalizes to CIM",
+    "releaseDate": "2026-01-13",
+    "description": "Technology Add-on for Trellix (McAfee) ePO - Ingests security telemetry via REST API and syslog, normalizes to CIM for use with Enterprise Security (ES) and Security Essentials. Includes comprehensive security dashboard, threat intelligence visualization, endpoint health monitoring, and compliance tracking.",
     "classification": {
-      "intendedAudience": "Security Operations",
-      "categories": ["Security", "Endpoint Protection"],
+      "intendedAudience": "Security Operations, IT Operations",
+      "categories": ["Security, Fraud & Compliance", "IT Operations"],
       "developmentStatus": "Production"
     },
     "license": {
-      "name": "Proprietary"
+      "name": "MIT",
+      "text": null,
+      "uri": "https://opensource.org/licenses/MIT"
+    },
+    "privacyPolicy": {
+      "name": null,
+      "text": null,
+      "uri": null
+    },
+    "releaseNotes": {
+      "name": "Release Notes",
+      "text": null,
+      "uri": "https://github.com/sarat1kyan/TA-trellix-epo/releases/tag/v1.1.0"
     }
-  }
+  },
+  "dependencies": null,
+  "tasks": null,
+  "incompatibleApps": null,
+  "platformRequirements": null,
+  "supportedDeployments": ["*"],
+  "targetWorkloads": ["*"]
 }

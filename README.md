@@ -2,9 +2,16 @@
 
 # Trellix (McAfee) ePO Splunk Technology Add-on
 
+[![Splunkbase](https://img.shields.io/badge/Splunkbase-Trellix%20ePO%20All%20in%20One-green?logo=splunk)](https://splunkbase.splunk.com/app/8351)
+[![Version](https://img.shields.io/badge/Version-1.1.0-blue)](https://github.com/sarat1kyan/TA-trellix-epo/releases)
+[![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
+[![CIM](https://img.shields.io/badge/CIM-4.x%20|%205.x%20|%206.x-orange)](https://docs.splunk.com/Documentation/CIM)
+
 <img width="1536" height="1024" alt="IMG_0189" src="https://github.com/user-attachments/assets/a6336c60-7846-489d-8d57-c4fff8487cc4" />
 
 Non official Splunk Technology Add-on for integrating Trellix (McAfee) ePO security telemetry into Splunk. This add-on provides comprehensive data collection, CIM normalization, and a powerful all-in-one security dashboard.
+
+**🚀 [Download from Splunkbase](https://splunkbase.splunk.com/app/8351)** | **📖 [Documentation](#overview)** | **🐛 [Report Issue](https://github.com/sarat1kyan/TA-trellix-epo/issues)**
 
 </div>
 
@@ -96,12 +103,34 @@ TA-trellix-epo/
 
 ### Prerequisites
 
-- Splunk Enterprise 8.0 or higher (Python 3 support)
+- Splunk Enterprise 8.0 or higher (Python 3 support) or Splunk Cloud
 - Trellix ePO server with REST API access
 - ePO user account with appropriate permissions (see [API Permissions](#api-permissions))
 - Network connectivity from Splunk to ePO server
 
-### Installation Steps
+### Option 1: Install from Splunkbase (Recommended)
+
+The easiest way to install this add-on is directly from Splunkbase:
+
+1. **Via Splunk Web UI:**
+   - Navigate to **Apps → Find More Apps**
+   - Search for "**Trellix ePO All in One**"
+   - Click **Install** and follow the prompts
+   - Or visit: [https://splunkbase.splunk.com/app/8351](https://splunkbase.splunk.com/app/8351)
+
+2. **Via Splunk CLI:**
+   ```bash
+   $SPLUNK_HOME/bin/splunk install app https://splunkbase.splunk.com/app/8351/release/1.1.0/download -auth admin:password
+   ```
+
+3. **For Splunk Cloud:**
+   - Go to **Apps → Browse More Apps** in Splunk Cloud
+   - Search for "Trellix ePO" and install
+   - Or request installation via Splunk Cloud support
+
+### Option 2: Install from GitHub
+
+For the latest development version or custom modifications:
 
 1. **Download the Add-on**
    ```bash
@@ -112,14 +141,17 @@ TA-trellix-epo/
 
 2. **Install to Splunk**
    ```bash
-   # Copy to Splunk apps directory
+   # Copy to Splunk apps directory (Linux/macOS)
    cp -r TA-trellix-epo $SPLUNK_HOME/etc/apps/
    
-   # Or on Windows:
-   xcopy /E /I TA-trellix-epo %SPLUNK_HOME%\etc\apps\
+   # Or on Windows (PowerShell):
+   Copy-Item -Recurse TA-trellix-epo $env:SPLUNK_HOME\etc\apps\
+   
+   # Or on Windows (CMD):
+   xcopy /E /I TA-trellix-epo %SPLUNK_HOME%\etc\apps\TA-trellix-epo
    ```
 
-3. **Set Permissions**
+3. **Set Permissions** (Linux/macOS only)
    ```bash
    # Set executable permissions on Python scripts
    chmod +x $SPLUNK_HOME/etc/apps/TA-trellix-epo/bin/*.py
@@ -130,10 +162,22 @@ TA-trellix-epo/
    $SPLUNK_HOME/bin/splunk restart
    ```
 
-5. **Install Python Dependencies** (if not using Splunk's bundled packages)
+### Post-Installation Steps
+
+After installing via either method:
+
+1. **Store ePO Credentials Securely:**
    ```bash
-   pip3 install -r $SPLUNK_HOME/etc/apps/TA-trellix-epo/requirements.txt
+   $SPLUNK_HOME/bin/splunk cmd python $SPLUNK_HOME/etc/apps/TA-trellix-epo/bin/configure_credentials.py
    ```
+
+2. **Configure the Add-on:**
+   - Navigate to **Apps → Trellix ePO Add-on → Set up**
+   - Enter your ePO server URL, port, and username
+
+3. **Enable Data Inputs:**
+   - Go to **Settings → Data Inputs → Trellix ePO Input**
+   - Enable and configure the inputs you need
 
 ## ⚙️ Configuration
 
@@ -572,17 +616,30 @@ index = security
 
 ### Resources
 
-- **Splunk Documentation**: https://docs.splunk.com
-- **Trellix ePO Documentation**: Check Trellix/McAfee documentation
-- **Splunk Answers**: https://answers.splunk.com
-- **GitHub Issues**: Report issues in repository
+- **Splunkbase App Page**: [https://splunkbase.splunk.com/app/8351](https://splunkbase.splunk.com/app/8351)
+- **GitHub Repository**: [https://github.com/sarat1kyan/TA-trellix-epo](https://github.com/sarat1kyan/TA-trellix-epo)
+- **Splunk Documentation**: [https://docs.splunk.com](https://docs.splunk.com)
+- **Splunk Answers**: [https://community.splunk.com](https://community.splunk.com)
+- **Trellix ePO Documentation**: Check Trellix/McAfee product documentation
 
 ### Getting Help
 
 1. Check [Troubleshooting](#troubleshooting) section
-2. Review Splunk logs
-3. Enable debug logging
-4. Search Splunk Answers
+2. Review Splunk logs (`$SPLUNK_HOME/var/log/splunk/splunkd.log`)
+3. Enable debug logging in `ta_trellix_epo_settings.conf`
+4. Search [Splunk Answers](https://community.splunk.com) for similar issues
+5. [Open a GitHub Issue](https://github.com/sarat1kyan/TA-trellix-epo/issues/new) with:
+   - Splunk version
+   - Add-on version (1.1.0)
+   - Error messages and log excerpts
+   - Sanitized configuration
+
+### Author & Maintainer
+
+This add-on is developed and maintained by **Mher Saratikyan**.
+
+- **Splunkbase Profile**: [Mher Saratikyan](https://splunkbase.splunk.com/apps/#/author/mher-saratikyan)
+- **GitHub**: [@sarat1kyan](https://github.com/sarat1kyan)
 5. Contact support with:
    - Splunk version
    - Add-on version
@@ -596,16 +653,25 @@ This Technology Add-on is provided as-is. Please review your organization's poli
 
 ## 🔄 Version History
 
+### Version 1.1.0 (2026-01-13)
+- **Full CIM Compliance** - Added eventtypes.conf and tags.conf for complete data model integration
+- **Enhanced Dashboard** - Security Command Center with interactive drilldowns and custom styling
+- **Improved API Client** - Better error handling, retry logic, and response parsing
+- **Utility Module** - New utils package with helper functions
+- **Configuration Specs** - Complete .spec files for settings and inputs
+- **Custom CSS** - Dark theme with GitHub-inspired styling
+- See [CHANGELOG.md](CHANGELOG.md) for full details
+
 ### Version 1.0.0 Beta
 - Initial release
 - Support for all major ePO data sources
-- CIM normalization
-- Comprehensive dashboard
+- CIM normalization via props.conf and transforms.conf
+- Basic security dashboard
 - Enterprise-ready implementation
 
 ---
 
-*This project is maintained by an individual developer in their spare time. This project is not affiliated with Splunk or CISCO*
+*This project is maintained by an individual developer in their spare time. This project is not affiliated with Splunk or Trellix/CISCO*
 ---
 
 ## 🙏 Acknowledgments
