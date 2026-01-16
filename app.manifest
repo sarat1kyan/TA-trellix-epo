@@ -1,0 +1,46 @@
+{
+  "schemaVersion": "2.0.0",
+  "info": {
+    "title": "Trellix ePO Technology Add-on",
+    "id": {
+      "group": null,
+      "name": "TA-trellix-epo",
+      "version": "2.0.0"
+    },
+    "author": [
+      {
+        "name": "Mher Saratikyan",
+        "email": "mhersaratikyan@outlook.com",
+        "company": "Armenian Card CJSC"
+      }
+    ],
+    "releaseDate": "2026-01-14",
+    "description": "Technology Add-on for Trellix (McAfee) ePO - Full enterprise security data collection from ePO REST API. v2.0 adds 9 new inputs: threat summary, software status, compliance overview, DLP incidents, device management, EDR events, web control, firewall, and application control. CIM-normalized for Enterprise Security (ES).",
+    "classification": {
+      "intendedAudience": "Security Operations, IT Operations",
+      "categories": ["Security, Fraud & Compliance", "IT Operations"],
+      "developmentStatus": "Production"
+    },
+    "license": {
+      "name": "MIT",
+      "text": null,
+      "uri": "https://opensource.org/licenses/MIT"
+    },
+    "privacyPolicy": {
+      "name": null,
+      "text": null,
+      "uri": null
+    },
+    "releaseNotes": {
+      "name": "Release Notes",
+      "text": null,
+      "uri": "https://github.com/sarat1kyan/TA-trellix-epo/releases/tag/v2.0.0"
+    }
+  },
+  "dependencies": null,
+  "tasks": null,
+  "incompatibleApps": null,
+  "platformRequirements": null,
+  "supportedDeployments": ["*"],
+  "targetWorkloads": ["*"]
+}

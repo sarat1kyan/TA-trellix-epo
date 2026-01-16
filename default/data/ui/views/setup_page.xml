@@ -1,0 +1,430 @@
+<dashboard version="1.1" theme="dark">
+  <label>Configure Trellix ePO Add-on</label>
+  <description>Quick setup guide for Trellix (McAfee) ePO integration - Version 2.0.0</description>
+  
+  <row>
+    <html>
+      <style>
+        .setup-container { 
+          max-width: 900px; 
+          margin: 0 auto; 
+          padding: 20px;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        .quick-start {
+          background: linear-gradient(135deg, #238636 0%, #1f6feb 100%);
+          border-radius: 16px;
+          padding: 32px;
+          margin-bottom: 24px;
+          color: white;
+          box-shadow: 0 8px 32px rgba(35, 134, 54, 0.3);
+        }
+        .quick-start h1 {
+          margin: 0 0 8px 0;
+          font-size: 1.8em;
+        }
+        .quick-start p {
+          margin: 0 0 20px 0;
+          opacity: 0.9;
+          font-size: 1.1em;
+        }
+        .quick-steps {
+          display: flex;
+          gap: 16px;
+          flex-wrap: wrap;
+        }
+        .quick-step {
+          background: rgba(255,255,255,0.15);
+          border-radius: 12px;
+          padding: 20px;
+          flex: 1;
+          min-width: 200px;
+          backdrop-filter: blur(10px);
+        }
+        .quick-step .step-num {
+          background: white;
+          color: #238636;
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: bold;
+          margin-bottom: 12px;
+        }
+        .quick-step h3 {
+          margin: 0 0 8px 0;
+          font-size: 1.1em;
+        }
+        .quick-step p {
+          margin: 0;
+          font-size: 0.9em;
+          opacity: 0.85;
+        }
+        .setup-section {
+          background: #21262d;
+          border: 1px solid #30363d;
+          border-radius: 12px;
+          padding: 24px;
+          margin-bottom: 20px;
+        }
+        .setup-section h2 {
+          color: #58a6ff;
+          margin-top: 0;
+          padding-bottom: 12px;
+          border-bottom: 1px solid #30363d;
+          font-size: 1.3em;
+        }
+        .setup-section h3 {
+          color: #c9d1d9;
+          margin-top: 16px;
+          font-size: 1.1em;
+        }
+        .info-box {
+          background: #0d1117;
+          border-left: 4px solid #238636;
+          padding: 16px;
+          margin: 16px 0;
+          border-radius: 4px;
+        }
+        .warning-box {
+          background: #0d1117;
+          border-left: 4px solid #d29922;
+          padding: 16px;
+          margin: 16px 0;
+          border-radius: 4px;
+        }
+        .success-box {
+          background: #0d1117;
+          border-left: 4px solid #3fb950;
+          padding: 16px;
+          margin: 16px 0;
+          border-radius: 4px;
+        }
+        .code-block {
+          background: #161b22;
+          border: 1px solid #30363d;
+          border-radius: 6px;
+          padding: 12px 16px;
+          font-family: 'SFMono-Regular', Consolas, monospace;
+          font-size: 13px;
+          overflow-x: auto;
+          margin: 12px 0;
+          color: #79c0ff;
+          white-space: pre-wrap;
+        }
+        .btn-primary {
+          background: #238636;
+          color: white;
+          border: none;
+          padding: 12px 24px;
+          border-radius: 8px;
+          cursor: pointer;
+          font-size: 14px;
+          font-weight: 600;
+          margin: 8px 8px 8px 0;
+          text-decoration: none;
+          display: inline-block;
+          transition: all 0.2s;
+        }
+        .btn-primary:hover {
+          background: #2ea043;
+          transform: translateY(-1px);
+        }
+        .btn-secondary {
+          background: #21262d;
+          color: #c9d1d9;
+          border: 1px solid #30363d;
+          padding: 12px 24px;
+          border-radius: 8px;
+          cursor: pointer;
+          font-size: 14px;
+          margin: 8px 8px 8px 0;
+          text-decoration: none;
+          display: inline-block;
+          transition: all 0.2s;
+        }
+        .btn-secondary:hover {
+          border-color: #58a6ff;
+          color: #58a6ff;
+        }
+        .config-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 16px 0;
+        }
+        .config-table th, .config-table td {
+          padding: 12px;
+          text-align: left;
+          border-bottom: 1px solid #30363d;
+        }
+        .config-table th {
+          background: #161b22;
+          color: #58a6ff;
+          font-weight: 600;
+        }
+        .config-table tr:hover {
+          background: rgba(56, 139, 253, 0.1);
+        }
+        .priority-high { color: #f85149; font-weight: 600; }
+        .priority-medium { color: #d29922; }
+        .priority-low { color: #8b949e; }
+        .copy-btn {
+          background: #30363d;
+          color: #c9d1d9;
+          border: none;
+          padding: 4px 12px;
+          border-radius: 4px;
+          cursor: pointer;
+          font-size: 12px;
+          float: right;
+        }
+        .copy-btn:hover {
+          background: #484f58;
+        }
+        .tab-container {
+          display: flex;
+          border-bottom: 1px solid #30363d;
+          margin-bottom: 16px;
+        }
+        .tab {
+          padding: 12px 20px;
+          cursor: pointer;
+          color: #8b949e;
+          border-bottom: 2px solid transparent;
+          margin-bottom: -1px;
+        }
+        .tab.active {
+          color: #58a6ff;
+          border-bottom-color: #58a6ff;
+        }
+        .tab:hover {
+          color: #c9d1d9;
+        }
+      </style>
+      
+      <div class="setup-container">
+        
+        <!-- Quick Start Hero Section -->
+        <div class="quick-start">
+          <h1>🚀 Quick Start Guide</h1>
+          <p>Get your Trellix ePO integration running in 3 simple steps</p>
+          
+          <div class="quick-steps">
+            <div class="quick-step">
+              <div class="step-num">1</div>
+              <h3>Configure Server</h3>
+              <p>Set your ePO server URL, port, and username in the settings file</p>
+            </div>
+            <div class="quick-step">
+              <div class="step-num">2</div>
+              <h3>Store Password</h3>
+              <p>Securely store your ePO password using the credential script</p>
+            </div>
+            <div class="quick-step">
+              <div class="step-num">3</div>
+              <h3>Enable Inputs</h3>
+              <p>Choose which data sources to collect and restart Splunk</p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Step 1: Server Configuration -->
+        <div class="setup-section">
+          <h2>📋 Step 1: Configure ePO Server Settings</h2>
+          
+          <div class="info-box">
+            <strong>💡 Quick Tip:</strong> You only need to set <code>epo_server</code> and <code>username</code>. All other settings have sensible defaults.
+          </div>
+          
+          <h3>Create Your Configuration File</h3>
+          <div class="code-block">
+# Linux/macOS
+cp $SPLUNK_HOME/etc/apps/TA-trellix-epo/default/ta_trellix_epo_settings.conf \
+   $SPLUNK_HOME/etc/apps/TA-trellix-epo/local/ta_trellix_epo_settings.conf
+
+# Windows (PowerShell)
+Copy-Item "$env:SPLUNK_HOME\etc\apps\TA-trellix-epo\default\ta_trellix_epo_settings.conf" `
+          "$env:SPLUNK_HOME\etc\apps\TA-trellix-epo\local\ta_trellix_epo_settings.conf"
+          </div>
+          
+          <h3>Edit the Configuration (Minimum Required)</h3>
+          <div class="code-block">
+[general]
+epo_server = your-epo-server.company.com
+username = your_epo_username
+          </div>
+          
+          <details>
+            <summary style="cursor: pointer; color: #58a6ff; margin: 16px 0;"><strong>▶ View All Configuration Options</strong></summary>
+            <table class="config-table">
+              <tr><th>Setting</th><th>Description</th><th>Default</th><th>Required</th></tr>
+              <tr><td><code>epo_server</code></td><td>ePO server hostname or IP</td><td>—</td><td>✅ Yes</td></tr>
+              <tr><td><code>username</code></td><td>ePO API username</td><td>—</td><td>✅ Yes</td></tr>
+              <tr><td><code>epo_port</code></td><td>ePO server port</td><td>8443</td><td>No</td></tr>
+              <tr><td><code>use_ssl</code></td><td>Use HTTPS connection</td><td>true</td><td>No</td></tr>
+              <tr><td><code>verify_ssl</code></td><td>Verify SSL certificate</td><td>true</td><td>No</td></tr>
+              <tr><td><code>timeout</code></td><td>Request timeout (seconds)</td><td>60</td><td>No</td></tr>
+              <tr><td><code>batch_size</code></td><td>Events per API call</td><td>1000</td><td>No</td></tr>
+              <tr><td><code>log_level</code></td><td>DEBUG, INFO, WARNING, ERROR</td><td>INFO</td><td>No</td></tr>
+            </table>
+          </details>
+        </div>
+        
+        <!-- Step 2: Password Configuration -->
+        <div class="setup-section">
+          <h2>🔐 Step 2: Store Password Securely</h2>
+          
+          <div class="warning-box">
+            <strong>⚠️ Security:</strong> Never store passwords in plain text files. Use one of the methods below.
+          </div>
+          
+          <h3>Option A: Interactive Script (Recommended)</h3>
+          <div class="code-block">
+# Linux/macOS
+sudo $SPLUNK_HOME/bin/splunk cmd python $SPLUNK_HOME/etc/apps/TA-trellix-epo/bin/configure_credentials.py
+
+# Windows (Run as Administrator)
+%SPLUNK_HOME%\bin\splunk cmd python %SPLUNK_HOME%\etc\apps\TA-trellix-epo\bin\configure_credentials.py
+          </div>
+          <p style="color: #8b949e; font-size: 0.9em;">The script will prompt for Splunk admin credentials, then your ePO username and password.</p>
+          
+          <h3>Option B: Direct curl Command</h3>
+          <div class="code-block">
+curl -k -u admin:SPLUNK_PASSWORD \
+  https://localhost:8089/servicesNS/nobody/TA-trellix-epo/storage/passwords \
+  -d name=YOUR_EPO_USERNAME \
+  -d password="YOUR_EPO_PASSWORD" \
+  -d realm=TA-trellix-epo
+          </div>
+          
+          <div class="success-box">
+            <strong>✅ Success:</strong> You should see "Created credential" or "Updated credential" message.
+          </div>
+        </div>
+        
+        <!-- Step 3: Enable Inputs -->
+        <div class="setup-section">
+          <h2>📥 Step 3: Enable Data Inputs</h2>
+          
+          <h3>Create Your Inputs Configuration</h3>
+          <div class="code-block">
+# Linux/macOS
+cp $SPLUNK_HOME/etc/apps/TA-trellix-epo/default/inputs.conf \
+   $SPLUNK_HOME/etc/apps/TA-trellix-epo/local/inputs.conf
+
+# Windows (PowerShell)
+Copy-Item "$env:SPLUNK_HOME\etc\apps\TA-trellix-epo\default\inputs.conf" `
+          "$env:SPLUNK_HOME\etc\apps\TA-trellix-epo\local\inputs.conf"
+          </div>
+          
+          <h3>Enable the Inputs You Need</h3>
+          <p>Edit <code>local/inputs.conf</code> and change <code>disabled = 1</code> to <code>disabled = 0</code>:</p>
+          
+          <table class="config-table">
+            <tr><th>Input</th><th>Description</th><th>Priority</th><th>Interval</th></tr>
+            <tr><td><code>threat_events</code></td><td>Security threats and detections</td><td class="priority-high">HIGH</td><td>5 min</td></tr>
+            <tr><td><code>malware_detections</code></td><td>Malware identification</td><td class="priority-high">HIGH</td><td>5 min</td></tr>
+            <tr><td><code>quarantine_events</code></td><td>Quarantine actions</td><td class="priority-high">HIGH</td><td>10 min</td></tr>
+            <tr><td><code>host_status</code></td><td>Endpoint inventory</td><td class="priority-medium">MEDIUM</td><td>1 hour</td></tr>
+            <tr><td><code>agent_status</code></td><td>Agent connectivity</td><td class="priority-medium">MEDIUM</td><td>1 hour</td></tr>
+            <tr><td><code>policy_compliance</code></td><td>Compliance monitoring</td><td class="priority-medium">MEDIUM</td><td>2 hours</td></tr>
+            <tr><td><code>user_actions</code></td><td>Admin audit logs</td><td class="priority-medium">MEDIUM</td><td>10 min</td></tr>
+            <tr><td><code>updates</code></td><td>DAT version tracking</td><td class="priority-low">LOW</td><td>4 hours</td></tr>
+          </table>
+          
+          <h3>Example: Enable Threat Monitoring</h3>
+          <div class="code-block">
+[trellix_epo://threat_events]
+disabled = 0
+interval = 300
+index = main
+
+[trellix_epo://malware_detections]
+disabled = 0
+interval = 300
+index = main
+          </div>
+        </div>
+        
+        <!-- Step 4: Restart and Verify -->
+        <div class="setup-section">
+          <h2>🔄 Step 4: Restart Splunk and Verify</h2>
+          
+          <h3>Restart Splunk</h3>
+          <div class="code-block">
+# Linux/macOS
+$SPLUNK_HOME/bin/splunk restart
+
+# Windows
+%SPLUNK_HOME%\bin\splunk restart
+          </div>
+          
+          <h3>Verify Data is Flowing</h3>
+          <div class="code-block">
+index=main sourcetype="trellix_epo:*" | head 10
+          </div>
+          
+          <div class="success-box">
+            <strong>🎉 All Done!</strong> Your Trellix ePO integration is now active. Visit the Security Command Center to view your data.
+          </div>
+        </div>
+        
+        <!-- Quick Links -->
+        <div class="setup-section">
+          <h2>🔗 Quick Actions</h2>
+          <p>
+            <a href="/app/TA-trellix-epo/trellix_epo_overview" class="btn-primary">📊 View Dashboard</a>
+            <a href="/manager/TA-trellix-epo/data/inputs/trellix_epo" class="btn-primary">⚙️ Manage Inputs</a>
+            <a href="/app/TA-trellix-epo/search?q=index%3D*%20sourcetype%3D%22trellix_epo%3A*%22%20%7C%20head%2050" class="btn-secondary">🔍 Search Data</a>
+            <a href="https://github.com/sarat1kyan/TA-trellix-epo" target="_blank" class="btn-secondary">📖 Documentation</a>
+            <a href="https://github.com/sarat1kyan/TA-trellix-epo/issues" target="_blank" class="btn-secondary">🐛 Report Issue</a>
+          </p>
+        </div>
+        
+        <!-- Troubleshooting -->
+        <div class="setup-section">
+          <h2>🔧 Troubleshooting</h2>
+          
+          <details>
+            <summary style="cursor: pointer; color: #58a6ff; margin: 8px 0;"><strong>▶ No data appearing?</strong></summary>
+            <div style="padding: 12px 0;">
+              <ol>
+                <li>Check that inputs are enabled (<code>disabled = 0</code>)</li>
+                <li>Verify ePO server is reachable: <code>curl -k https://your-epo-server:8443</code></li>
+                <li>Check Splunk logs: <code>index=_internal sourcetype=splunkd component=ModularInputs trellix</code></li>
+                <li>Verify credentials are stored: <code>| rest /servicesNS/nobody/TA-trellix-epo/storage/passwords</code></li>
+              </ol>
+            </div>
+          </details>
+          
+          <details>
+            <summary style="cursor: pointer; color: #58a6ff; margin: 8px 0;"><strong>▶ SSL Certificate errors?</strong></summary>
+            <div style="padding: 12px 0;">
+              <p>If your ePO server uses a self-signed certificate, set in <code>local/ta_trellix_epo_settings.conf</code>:</p>
+              <div class="code-block">verify_ssl = false</div>
+              <p style="color: #d29922;">⚠️ Only use this in development/testing environments.</p>
+            </div>
+          </details>
+          
+          <details>
+            <summary style="cursor: pointer; color: #58a6ff; margin: 8px 0;"><strong>▶ Authentication failures?</strong></summary>
+            <div style="padding: 12px 0;">
+              <ol>
+                <li>Verify the ePO username has API access permissions</li>
+                <li>Check password is correctly stored (re-run configure_credentials.py)</li>
+                <li>Ensure username in settings matches the stored credential</li>
+              </ol>
+            </div>
+          </details>
+        </div>
+        
+        <div style="text-align: center; padding: 20px; color: #8b949e; font-size: 12px;">
+          <p>Trellix ePO Add-on v2.0.0 | <a href="https://splunkbase.splunk.com/app/8351" target="_blank" style="color: #58a6ff;">Splunkbase</a> | <a href="https://github.com/sarat1kyan/TA-trellix-epo" target="_blank" style="color: #58a6ff;">GitHub</a></p>
+        </div>
+        
+      </div>
+    </html>
+  </row>
+</dashboard>

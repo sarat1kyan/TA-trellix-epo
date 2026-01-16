@@ -1,0 +1,1201 @@
+<form version="1.1" theme="light">
+  <label>Trellix ePO Security Command Center</label>
+  <description>Comprehensive security dashboard for Trellix (McAfee) ePO telemetry - Endpoint inventory, agent health, and security monitoring</description>
+  
+  <!-- Data Source Status Panel -->
+  <row>
+    <html>
+      <style>
+        .panel-head h3 { font-weight: 600; }
+        .single-value .single-result { font-size: 2.2em !important; font-weight: 700; }
+        .data-status { background: #f0f4f8; padding: 12px 16px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #0066cc; }
+        .data-status h4 { margin: 0 0 8px 0; color: #333; }
+        .data-status p { margin: 0; color: #666; font-size: 13px; }
+      </style>
+      <div class="data-status">
+        <h4>Data Sources</h4>
+        <p>This dashboard displays data from enabled ePO inputs. Panels showing "No results" indicate those data sources are not configured or have no data. 
+           Check Settings - Data Inputs - Trellix ePO to enable additional inputs like threat_events, malware_detections, etc.</p>
+      </div>
+    </html>
+  </row>
+  
+  <fieldset submitButton="false" autoRun="true">
+    <input type="time" token="time_range" searchWhenChanged="true">
+      <label>📅 Time Range</label>
+      <default>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+    
+    <input type="dropdown" token="index_filter" searchWhenChanged="true">
+      <label>📁 Index</label>
+      <choice value="*">All Indexes</choice>
+      <default>*</default>
+      <search>
+        <query>| eventcount summarize=false index=* | dedup index | sort index | table index</query>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </search>
+      <fieldForLabel>index</fieldForLabel>
+      <fieldForValue>index</fieldForValue>
+    </input>
+    
+    <input type="multiselect" token="filter_host" searchWhenChanged="true">
+      <label>🖥️ Host Filter</label>
+      <choice value="*">All Hosts</choice>
+      <default>*</default>
+      <delimiter> OR host=</delimiter>
+      <prefix>host=</prefix>
+      <fieldForLabel>host</fieldForLabel>
+      <fieldForValue>host</fieldForValue>
+      <search>
+        <query>index=$index_filter$ sourcetype="trellix_epo:*" 
+| eval host=coalesce('EPOComputerProperties.ComputerName', computerName, host)
+| stats count by host | sort -count | head 50</query>
+        <earliest>$time_range.earliest$</earliest>
+        <latest>$time_range.latest$</latest>
+      </search>
+    </input>
+    
+    <input type="dropdown" token="filter_severity" searchWhenChanged="true">
+      <label>⚠️ Severity</label>
+      <choice value="*">All Severities</choice>
+      <choice value="Critical">Critical</choice>
+      <choice value="High">High</choice>
+      <choice value="Medium">Medium</choice>
+      <choice value="Low">Low</choice>
+      <default>*</default>
+    </input>
+  </fieldset>
+  
+  <!-- Executive Summary Row - Shows only working metrics -->
+  <row>
+    <panel>
+      <title>Executive Summary - Endpoint Overview</title>
+    </panel>
+  </row>
+  
+  <row>
+    <panel>
+      <single>
+        <title>Total Managed Endpoints</title>
+        <search>
+          <query>index=$index_filter$ sourcetype="trellix_epo:host_status"
+| eval host=coalesce('EPOComputerProperties.ComputerName', computerName, host)
+| search $filter_host$
+| dedup host
+| stats dc(host) as total_hosts</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x65a637","0x65a637","0x65a637"]</option>
+        <option name="rangeValues">[0,50]</option>
+        <option name="showSparkline">false</option>
+        <option name="unit">Endpoints</option>
+        <option name="useColors">true</option>
+      </single>
+    </panel>
+    
+    <panel>
+      <single>
+        <title>Windows Endpoints</title>
+        <search>
+          <query>index=$index_filter$ sourcetype="trellix_epo:host_status"
+| eval host=coalesce('EPOComputerProperties.ComputerName', computerName, host)
+| eval os='EPOComputerProperties.OSType'
+| search $filter_host$
+| dedup host
+| search os="Windows*"
+| stats count</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x0066cc","0x0066cc","0x0066cc"]</option>
+        <option name="rangeValues">[0,50]</option>
+        <option name="showSparkline">false</option>
+        <option name="unit">Hosts</option>
+        <option name="useColors">true</option>
+      </single>
+    </panel>
+    
+    <panel>
+      <single>
+        <title>Linux Endpoints</title>
+        <search>
+          <query>index=$index_filter$ sourcetype="trellix_epo:host_status"
+| eval host=coalesce('EPOComputerProperties.ComputerName', computerName, host)
+| eval os='EPOComputerProperties.OSType'
+| search $filter_host$
+| dedup host
+| search os="*Linux*" OR os="*linux*"
+| stats count</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0xf7941d","0xf7941d","0xf7941d"]</option>
+        <option name="rangeValues">[0,50]</option>
+        <option name="showSparkline">false</option>
+        <option name="unit">Hosts</option>
+        <option name="useColors">true</option>
+      </single>
+    </panel>
+    
+    <panel>
+      <single>
+        <title>Managed Agents</title>
+        <search>
+          <query>index=$index_filter$ sourcetype="trellix_epo:agent_status"
+| eval host=coalesce('EPOComputerProperties.ComputerName', computerName, host)
+| eval managed='EPOLeafNode.ManagedState'
+| search $filter_host$
+| dedup host
+| where managed=1
+| stats count</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x65a637","0x65a637","0x65a637"]</option>
+        <option name="rangeValues">[0,50]</option>
+        <option name="showSparkline">false</option>
+        <option name="unit">Agents</option>
+        <option name="useColors">true</option>
+      </single>
+    </panel>
+    
+    <panel>
+      <single>
+        <title>Events Ingested (24h)</title>
+        <search>
+          <query>index=$index_filter$ sourcetype="trellix_epo:*"
+| stats count as total_events</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x555555","0x555555","0x555555"]</option>
+        <option name="rangeValues">[0,1000]</option>
+        <option name="showSparkline">false</option>
+        <option name="unit">Events</option>
+        <option name="useColors">true</option>
+      </single>
+    </panel>
+    
+  </row>
+  
+  <!-- ============================================ -->
+  <!-- NEW v2.0.0 SECTIONS -->
+  <!-- ============================================ -->
+  
+  <!-- Threat Status Summary Section -->
+  <row>
+    <html>
+      <div style="background: #e8f4fd; border: 1px solid #0066cc; border-radius: 4px; padding: 10px 15px; margin: 10px 0;">
+        <strong>Threat Status Summary</strong> - Escalated, Unresolved, and Resolved threats. Requires <code>threat_summary</code> input.
+      </div>
+    </html>
+  </row>
+  
+  <row>
+    <panel>
+      <single>
+        <title>Escalated Devices</title>
+        <search>
+          <query>index=$index_filter$ sourcetype="trellix_epo:threat_summary"
+| eval threat_status=coalesce(threatStatus, threat_status)
+| search threat_status="Escalated"
+| stats dc(host) as escalated_count</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x65a637","0xf7941d","0xf85149"]</option>
+        <option name="rangeValues">[0,5]</option>
+        <option name="showSparkline">false</option>
+        <option name="unit">Devices</option>
+        <option name="useColors">true</option>
+      </single>
+    </panel>
+    
+    <panel>
+      <single>
+        <title>Unresolved Threats</title>
+        <search>
+          <query>index=$index_filter$ sourcetype="trellix_epo:threat_summary"
+| eval threat_status=coalesce(threatStatus, threat_status)
+| search threat_status="Unresolved" OR threat_status="Active"
+| stats count as unresolved_count</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x65a637","0xf7941d","0xf85149"]</option>
+        <option name="rangeValues">[0,10]</option>
+        <option name="showSparkline">false</option>
+        <option name="unit">Threats</option>
+        <option name="useColors">true</option>
+      </single>
+    </panel>
+    
+    <panel>
+      <single>
+        <title>Resolved (Advanced)</title>
+        <search>
+          <query>index=$index_filter$ sourcetype="trellix_epo:threat_summary"
+| eval threat_status=coalesce(threatStatus, threat_status)
+| eval resolution_type=coalesce(resolutionType, resolution_type)
+| search threat_status="Resolved" resolution_type="Advanced"
+| stats count as resolved_advanced</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x65a637","0x65a637","0x65a637"]</option>
+        <option name="rangeValues">[0,100]</option>
+        <option name="showSparkline">false</option>
+        <option name="unit">Resolved</option>
+        <option name="useColors">true</option>
+      </single>
+    </panel>
+    
+    <panel>
+      <single>
+        <title>Resolved (Basic)</title>
+        <search>
+          <query>index=$index_filter$ sourcetype="trellix_epo:threat_summary"
+| eval threat_status=coalesce(threatStatus, threat_status)
+| eval resolution_type=coalesce(resolutionType, resolution_type)
+| search threat_status="Resolved" resolution_type="Basic"
+| stats count as resolved_basic</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x65a637","0x65a637","0x65a637"]</option>
+        <option name="rangeValues">[0,100]</option>
+        <option name="showSparkline">false</option>
+        <option name="unit">Resolved</option>
+        <option name="useColors">true</option>
+      </single>
+    </panel>
+    
+    <panel>
+      <single>
+        <title>Report Only Detections</title>
+        <search>
+          <query>index=$index_filter$ sourcetype="trellix_epo:threat_summary"
+| eval action=coalesce(action, action_taken, "N/A")
+| search action="Report*" OR action="Observe*" OR action="Log*"
+| stats count as report_only</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x8b949e","0x8b949e","0x8b949e"]</option>
+        <option name="rangeValues">[0,100]</option>
+        <option name="showSparkline">false</option>
+        <option name="unit">Detections</option>
+        <option name="useColors">true</option>
+      </single>
+    </panel>
+  </row>
+  
+  <!-- Software Deployment Status Section -->
+  <row>
+    <html>
+      <div style="background: #e8f4fd; border: 1px solid #0066cc; border-radius: 4px; padding: 10px 15px; margin: 10px 0;">
+        <strong>Software Deployment Status</strong> - Product coverage and version distribution. Requires <code>software_status</code> input.
+      </div>
+    </html>
+  </row>
+  
+  <row>
+    <panel>
+      <title>Product Coverage</title>
+      <chart>
+        <search>
+          <query>index=$index_filter$ sourcetype="trellix_epo:software_status"
+| eval product_name=coalesce(productName, product_name, product_code, "Unknown")
+| eval install_count=coalesce(installCount, install_count, 1)
+| stats sum(install_count) as installations by product_name
+| sort -installations
+| head 10</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="charting.chart">bar</option>
+        <option name="charting.chart.showDataLabels">all</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.legend.placement">none</option>
+        <option name="charting.fieldColors">{"installations": 0x1f6feb}</option>
+        <option name="height">250</option>
+      </chart>
+    </panel>
+    
+    <panel>
+      <title>Deployment Status</title>
+      <chart>
+        <search>
+          <query>index=$index_filter$ sourcetype="trellix_epo:software_status"
+| eval status=coalesce(deploymentStatus, status, "Unknown")
+| stats count by status</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="charting.chart">pie</option>
+        <option name="charting.chart.showPercent">true</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.fieldColors">{"Deployed": 0x3fb950, "Pending": 0xf7941d, "Failed": 0xf85149, "Unknown": 0x8b949e}</option>
+        <option name="height">250</option>
+      </chart>
+    </panel>
+    
+    <panel>
+      <title>Version Distribution</title>
+      <table>
+        <search>
+          <query>index=$index_filter$ sourcetype="trellix_epo:software_status"
+| eval product_name=coalesce(productName, product_name, product_code, "Unknown")
+| eval product_version=coalesce(productVersion, product_version, "N/A")
+| eval install_count=coalesce(installCount, install_count, 1)
+| stats sum(install_count) as "Installations" by product_name, product_version
+| sort -Installations
+| rename product_name as "Product", product_version as "Version"
+| head 15</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="count">10</option>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+  </row>
+  
+  <!-- Device Health Section -->
+  <row>
+    <html>
+      <div style="background: #e8f4fd; border: 1px solid #0066cc; border-radius: 4px; padding: 10px 15px; margin: 10px 0;">
+        <strong>Device Health</strong> - Check-in failures and protection status. Requires <code>device_management</code> input.
+      </div>
+    </html>
+  </row>
+  
+  <row>
+    <panel>
+      <single>
+        <title>Check-in Failures (7+ days)</title>
+        <search>
+          <query>index=$index_filter$ sourcetype="trellix_epo:device_management"
+| eval days_since_checkin=coalesce(daysSinceCheckin, days_since_checkin, 0)
+| where days_since_checkin > 7
+| stats dc(host) as checkin_failures</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x65a637","0xf7941d","0xf85149"]</option>
+        <option name="rangeValues">[0,5]</option>
+        <option name="showSparkline">false</option>
+        <option name="unit">Devices</option>
+        <option name="useColors">true</option>
+      </single>
+    </panel>
+    
+    <panel>
+      <single>
+        <title>Unprotected Devices</title>
+        <search>
+          <query>index=$index_filter$ sourcetype="trellix_epo:device_management"
+| eval protection_status=coalesce(protectionStatus, protection_status, "Unknown")
+| search protection_status="Unprotected"
+| stats dc(host) as unprotected_count</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x65a637","0xf7941d","0xf85149"]</option>
+        <option name="rangeValues">[0,3]</option>
+        <option name="showSparkline">false</option>
+        <option name="unit">Devices</option>
+        <option name="useColors">true</option>
+      </single>
+    </panel>
+    
+    <panel>
+      <single>
+        <title>Reboot Pending</title>
+        <search>
+          <query>index=$index_filter$ sourcetype="trellix_epo:device_management"
+| eval reboot_pending=coalesce(rebootPending, reboot_pending, "false")
+| search reboot_pending="true" OR reboot_pending=1
+| stats dc(host) as reboot_pending_count</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x65a637","0xf7941d","0xf7941d"]</option>
+        <option name="rangeValues">[0,5]</option>
+        <option name="showSparkline">false</option>
+        <option name="unit">Devices</option>
+        <option name="useColors">true</option>
+      </single>
+    </panel>
+    
+    <panel>
+      <title>Protection Status</title>
+      <chart>
+        <search>
+          <query>index=$index_filter$ sourcetype="trellix_epo:device_management"
+| eval protection_status=coalesce(protectionStatus, protection_status, "Unknown")
+| dedup host
+| stats count by protection_status</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="charting.chart">pie</option>
+        <option name="charting.chart.showPercent">true</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.fieldColors">{"Protected": 0x3fb950, "Unprotected": 0xf85149, "Unknown": 0x8b949e}</option>
+        <option name="height">200</option>
+      </chart>
+    </panel>
+  </row>
+  
+  <!-- DLP Section -->
+  <row>
+    <html>
+      <div style="background: #e8f4fd; border: 1px solid #0066cc; border-radius: 4px; padding: 10px 15px; margin: 10px 0;">
+        <strong>Data Loss Prevention</strong> - DLP incidents and policy violations. Requires <code>dlp_incidents</code> input.
+      </div>
+    </html>
+  </row>
+  
+  <row>
+    <panel>
+      <single>
+        <title>Total DLP Incidents</title>
+        <search>
+          <query>index=$index_filter$ sourcetype="trellix_epo:dlp_incidents"
+| stats count as total_incidents</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x65a637","0xf7941d","0xf85149"]</option>
+        <option name="rangeValues">[0,10]</option>
+        <option name="showSparkline">false</option>
+        <option name="unit">Incidents</option>
+        <option name="useColors">true</option>
+      </single>
+    </panel>
+    
+    <panel>
+      <title>DLP by Severity</title>
+      <chart>
+        <search>
+          <query>index=$index_filter$ sourcetype="trellix_epo:dlp_incidents"
+| eval severity=coalesce(severity, "Unknown")
+| stats count by severity
+| eval sort_order=case(severity="Critical",1, severity="High",2, severity="Medium",3, severity="Low",4, true(),5)
+| sort sort_order
+| fields - sort_order</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="charting.chart">pie</option>
+        <option name="charting.chart.showPercent">true</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.fieldColors">{"Critical": 0xf85149, "High": 0xdb6d28, "Medium": 0xd29922, "Low": 0x3fb950}</option>
+        <option name="height">200</option>
+      </chart>
+    </panel>
+    
+    <panel>
+      <title>Top DLP Rules Triggered</title>
+      <chart>
+        <search>
+          <query>index=$index_filter$ sourcetype="trellix_epo:dlp_incidents"
+| eval rule_name=coalesce(ruleName, rule_name, "Unknown")
+| stats count as triggers by rule_name
+| sort -triggers
+| head 5</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="charting.chart">bar</option>
+        <option name="charting.chart.showDataLabels">all</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.legend.placement">none</option>
+        <option name="charting.fieldColors">{"triggers": 0xf85149}</option>
+        <option name="height">200</option>
+      </chart>
+    </panel>
+  </row>
+  
+  <!-- Compliance Overview Section -->
+  <row>
+    <html>
+      <div style="background: #e8f4fd; border: 1px solid #0066cc; border-radius: 4px; padding: 10px 15px; margin: 10px 0;">
+        <strong>Compliance Overview</strong> - Security content compliance. Requires <code>compliance_overview</code> input.
+      </div>
+    </html>
+  </row>
+  
+  <row>
+    <panel>
+      <single>
+        <title>Compliant Systems</title>
+        <search>
+          <query>index=$index_filter$ sourcetype="trellix_epo:compliance_overview"
+| eval compliance_status=coalesce(complianceStatus, compliance_status, "Unknown")
+| search compliance_status="Compliant"
+| stats dc(host) as compliant_count</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x65a637","0x65a637","0x65a637"]</option>
+        <option name="rangeValues">[0,100]</option>
+        <option name="showSparkline">false</option>
+        <option name="unit">Systems</option>
+        <option name="useColors">true</option>
+      </single>
+    </panel>
+    
+    <panel>
+      <single>
+        <title>Non-Compliant Systems</title>
+        <search>
+          <query>index=$index_filter$ sourcetype="trellix_epo:compliance_overview"
+| eval compliance_status=coalesce(complianceStatus, compliance_status, "Unknown")
+| search compliance_status="Non-Compliant"
+| stats dc(host) as non_compliant_count</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x65a637","0xf7941d","0xf85149"]</option>
+        <option name="rangeValues">[0,5]</option>
+        <option name="showSparkline">false</option>
+        <option name="unit">Systems</option>
+        <option name="useColors">true</option>
+      </single>
+    </panel>
+    
+    <panel>
+      <title>Compliance by Content Type</title>
+      <chart>
+        <search>
+          <query>index=$index_filter$ sourcetype="trellix_epo:compliance_overview"
+| eval content_type=coalesce(contentType, content_type, "Unknown")
+| eval compliance_pct=coalesce(compliancePct, compliance_pct, 0)
+| stats avg(compliance_pct) as "Compliance %" by content_type
+| sort -"Compliance %"</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="charting.chart">bar</option>
+        <option name="charting.chart.showDataLabels">all</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.legend.placement">none</option>
+        <option name="charting.fieldColors">{"Compliance %": 0x3fb950}</option>
+        <option name="height">200</option>
+      </chart>
+    </panel>
+  </row>
+  
+  <!-- ============================================ -->
+  <!-- END OF NEW v2.0.0 SECTIONS -->
+  <!-- ============================================ -->
+  
+  <!-- Threat Intelligence Section - Requires threat_events/malware_detections inputs -->
+  <row>
+    <html>
+      <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; padding: 10px 15px; margin: 10px 0;">
+        <strong>Threat Intelligence Section</strong> - These panels require <code>threat_events</code> and <code>malware_detections</code> inputs to be enabled. 
+        If showing "No results", enable these inputs in Settings - Data Inputs - Trellix ePO.
+      </div>
+    </html>
+  </row>
+  
+  <row>
+    <panel>
+      <title>📈 Threat Event Timeline</title>
+      <chart>
+        <search>
+          <query>index=$index_filter$ sourcetype="trellix_epo:threat_events" OR sourcetype="trellix_epo:malware_detections"
+| eval host=coalesce('EPOComputerProperties.ComputerName', computerName, host)
+| search $filter_host$ severity="$filter_severity$"
+| timechart span=1h count by severity
+| fillnull value=0</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="charting.chart">area</option>
+        <option name="charting.chart.nullValueMode">zero</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.legend.placement">bottom</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.fieldColors">{"Critical": 0xf85149, "High": 0xdb6d28, "Medium": 0xd29922, "Low": 0x3fb950}</option>
+        <option name="height">300</option>
+        <option name="refresh.display">progressbar</option>
+        <drilldown>
+          <link target="_blank">/app/TA-trellix-epo/search?q=index=$index_filter$ sourcetype="trellix_epo:threat_events" severity="$click.name2$" earliest=$earliest$ latest=$latest$</link>
+        </drilldown>
+      </chart>
+    </panel>
+  </row>
+  
+  <row>
+    <panel>
+      <title>🎯 Top Threat Types</title>
+      <chart>
+        <search>
+          <query>index=$index_filter$ sourcetype="trellix_epo:threat_events"
+| eval host=coalesce('EPOComputerProperties.ComputerName', computerName, host)
+| search $filter_host$ severity="$filter_severity$"
+| stats count as threat_count by threat_type
+| sort -threat_count
+| head 10</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="charting.chart">bar</option>
+        <option name="charting.chart.showDataLabels">all</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.legend.placement">none</option>
+        <option name="charting.fieldColors">{"threat_count": 0x1f6feb}</option>
+        <option name="height">300</option>
+        <option name="refresh.display">progressbar</option>
+        <drilldown>
+          <link target="_blank">/app/TA-trellix-epo/search?q=index=$index_filter$ sourcetype="trellix_epo:threat_events" threat_type="$click.value$"</link>
+        </drilldown>
+      </chart>
+    </panel>
+    
+    <panel>
+      <title>🦠 Top Malware Families</title>
+      <chart>
+        <search>
+          <query>index=$index_filter$ sourcetype="trellix_epo:malware_detections"
+| eval host=coalesce('EPOComputerProperties.ComputerName', computerName, host)
+| search $filter_host$
+| stats count as detection_count by malware_name
+| sort -detection_count
+| head 10</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="charting.chart">bar</option>
+        <option name="charting.chart.showDataLabels">all</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.legend.placement">none</option>
+        <option name="charting.fieldColors">{"detection_count": 0xf85149}</option>
+        <option name="height">300</option>
+        <option name="refresh.display">progressbar</option>
+        <drilldown>
+          <link target="_blank">/app/TA-trellix-epo/search?q=index=$index_filter$ sourcetype="trellix_epo:malware_detections" malware_name="$click.value$"</link>
+        </drilldown>
+      </chart>
+    </panel>
+    
+    <panel>
+      <title>⚠️ Severity Distribution</title>
+      <chart>
+        <search>
+          <query>index=$index_filter$ sourcetype="trellix_epo:threat_events"
+| eval host=coalesce('EPOComputerProperties.ComputerName', computerName, host)
+| search $filter_host$ severity="$filter_severity$"
+| stats count by severity
+| eval sort_order=case(severity="Critical", 1, severity="High", 2, severity="Medium", 3, severity="Low", 4, true(), 5)
+| sort sort_order
+| fields - sort_order</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="charting.chart">pie</option>
+        <option name="charting.chart.showPercent">true</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.fieldColors">{"Critical": 0xf85149, "High": 0xdb6d28, "Medium": 0xd29922, "Low": 0x3fb950}</option>
+        <option name="height">300</option>
+        <option name="refresh.display">progressbar</option>
+        <drilldown>
+          <set token="filter_severity">$click.value$</set>
+        </drilldown>
+      </chart>
+    </panel>
+  </row>
+  
+  <row>
+    <panel>
+      <title>🔍 IOC Hunt - File Hashes</title>
+      <table>
+        <search>
+          <query>index=$index_filter$ sourcetype="trellix_epo:malware_detections"
+| eval host=coalesce('EPOComputerProperties.ComputerName', computerName, host)
+| search $filter_host$ file_hash=*
+| stats count as detections, dc(host) as affected_hosts, 
+        values(malware_name) as malware_names, 
+        latest(file_path) as file_path,
+        latest(_time) as last_seen
+by file_hash
+| sort -detections
+| head 15
+| eval last_seen=strftime(last_seen, "%Y-%m-%d %H:%M:%S")
+| rename file_hash as "File Hash", detections as "Detections", affected_hosts as "Affected Hosts", malware_names as "Malware", file_path as "File Path", last_seen as "Last Seen"</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="count">15</option>
+        <option name="drilldown">row</option>
+        <option name="wrap">false</option>
+        <format type="color" field="Detections">
+          <colorPalette type="minMidMax" minColor="#3fb950" midColor="#d29922" maxColor="#f85149"></colorPalette>
+        </format>
+        <format type="color" field="Affected Hosts">
+          <colorPalette type="minMidMax" minColor="#3fb950" midColor="#d29922" maxColor="#f85149"></colorPalette>
+        </format>
+        <drilldown>
+          <link target="_blank">/app/TA-trellix-epo/search?q=index=$index_filter$ sourcetype="trellix_epo:malware_detections" file_hash="$row.File Hash$"</link>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+  
+  <!-- Endpoint Health Section -->
+  <row>
+    <panel>
+      <title>💻 Endpoint Protection Status</title>
+    </panel>
+  </row>
+  
+  <row>
+    <panel>
+      <title>🟢 Agent Status Distribution</title>
+      <chart>
+        <search>
+          <query>index=$index_filter$ sourcetype="trellix_epo:agent_status"
+| eval host=coalesce('EPOComputerProperties.ComputerName', computerName, host)
+| eval managed_state='EPOLeafNode.ManagedState'
+| eval agent_status=case(managed_state=1, "Managed", managed_state=0, "Unmanaged", true(), "Unknown")
+| search $filter_host$
+| dedup host
+| stats count by agent_status</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="charting.chart">pie</option>
+        <option name="charting.chart.showPercent">true</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.fieldColors">{"Active": 0x3fb950, "Online": 0x3fb950, "Inactive": 0xf85149, "Offline": 0xf85149, "Unknown": 0x8b949e}</option>
+        <option name="height">250</option>
+        <option name="refresh.display">progressbar</option>
+        <drilldown>
+          <link target="_blank">/app/TA-trellix-epo/search?q=index=$index_filter$ sourcetype="trellix_epo:agent_status" agent_status="$click.value$"</link>
+        </drilldown>
+      </chart>
+    </panel>
+    
+    <panel>
+      <title>📊 Agent Version Distribution</title>
+      <chart>
+        <search>
+          <query>index=$index_filter$ (sourcetype="trellix_epo:host_status" OR sourcetype="trellix_epo:agent_status")
+| eval host=coalesce('EPOComputerProperties.ComputerName', computerName, host)
+| eval agent_version=coalesce('EPOLeafNode.AgentVersion', agentVersion, "Unknown")
+| search $filter_host$
+| dedup host
+| stats count as host_count by agent_version
+| sort -host_count
+| head 10</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.showDataLabels">all</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.legend.placement">none</option>
+        <option name="charting.fieldColors">{"host_count": 0x238636}</option>
+        <option name="height">250</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+    
+    <panel>
+      <title>🖥️ OS Distribution</title>
+      <chart>
+        <search>
+          <query>index=$index_filter$ sourcetype="trellix_epo:host_status"
+| eval host=coalesce('EPOComputerProperties.ComputerName', computerName, host)
+| eval os='EPOComputerProperties.OSType'
+| search $filter_host$
+| dedup host
+| rex field=os "(?&lt;os_family&gt;Windows|Linux|macOS|Mac OS|Darwin)"
+| eval os_family=if(isnull(os_family) OR os_family="", "Other", os_family)
+| stats count by os_family</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="charting.chart">pie</option>
+        <option name="charting.chart.showPercent">true</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.fieldColors">{"Windows": 0x0078d4, "Linux": 0xfcc624, "macOS": 0x8b949e, "Mac OS": 0x8b949e, "Other": 0x6e7681}</option>
+        <option name="height">250</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  
+  <!-- Endpoint Inventory Table -->
+  <row>
+    <panel>
+      <title>📋 Endpoint Inventory</title>
+      <table>
+        <search>
+          <query>index=$index_filter$ sourcetype="trellix_epo:host_status"
+| eval host=coalesce('EPOComputerProperties.ComputerName', computerName, host)
+| eval ip=coalesce('EPOComputerProperties.IPAddress', ipAddress, "N/A")
+| eval os=coalesce('EPOComputerProperties.OSType', osType, "Unknown")
+| eval user=coalesce('EPOComputerProperties.UserName', userName, "N/A")
+| eval domain=coalesce('EPOComputerProperties.DomainName', domainName, "N/A")
+| eval agent_ver=coalesce('EPOLeafNode.AgentVersion', agentVersion, "N/A")
+| eval last_update='EPOLeafNode.LastUpdate'
+| search $filter_host$
+| dedup host
+| table host, ip, os, domain, user, agent_ver, last_update
+| rename host as "Hostname", ip as "IP Address", os as "OS", domain as "Domain", user as "User", agent_ver as "Agent Version", last_update as "Last Update"
+| sort Hostname
+| head 50</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="count">20</option>
+        <option name="drilldown">row</option>
+        <option name="wrap">false</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  
+  <row>
+    <panel>
+      <title>🏠 Most Affected Hosts</title>
+      <table>
+        <search>
+          <query>index=$index_filter$ (sourcetype="trellix_epo:threat_events" OR sourcetype="trellix_epo:malware_detections")
+| eval host=coalesce('EPOComputerProperties.ComputerName', computerName, host)
+| search $filter_host$ severity="$filter_severity$"
+| stats count as total_threats, 
+        dc(threat_type) as threat_types,
+        dc(malware_name) as unique_malware,
+        latest(severity) as last_severity,
+        latest(_time) as last_threat_time
+by host
+| sort -total_threats
+| head 20
+| eval last_threat_time=strftime(last_threat_time, "%Y-%m-%d %H:%M")
+| rename host as "Host", total_threats as "Total Threats", threat_types as "Threat Types", unique_malware as "Unique Malware", last_severity as "Last Severity", last_threat_time as "Last Threat"</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="count">20</option>
+        <option name="drilldown">row</option>
+        <option name="wrap">false</option>
+        <format type="color" field="Total Threats">
+          <colorPalette type="minMidMax" minColor="#3fb950" midColor="#d29922" maxColor="#f85149"></colorPalette>
+        </format>
+        <format type="color" field="Last Severity">
+          <colorPalette type="map">{"Critical":#f85149,"High":#db6d28,"Medium":#d29922,"Low":#3fb950}</colorPalette>
+        </format>
+        <drilldown>
+          <set token="filter_host">host="$row.Host$"</set>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+  
+  <!-- Policy & Compliance Section - Requires policy_compliance input -->
+  <row>
+    <html>
+      <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; padding: 10px 15px; margin: 10px 0;">
+        <strong>Policy Compliance Section</strong> - These panels require the <code>policy_compliance</code> input to be enabled.
+      </div>
+    </html>
+  </row>
+  
+  <row>
+    <panel>
+      <title>✅ Compliance Status</title>
+      <chart>
+        <search>
+          <query>index=$index_filter$ sourcetype="trellix_epo:policy_compliance"
+| eval host=coalesce('EPOComputerProperties.ComputerName', computerName, host)
+| search $filter_host$
+| dedup host
+| stats count by compliance_status
+| eval compliance_status=if(isnull(compliance_status), "Unknown", compliance_status)</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="charting.chart">pie</option>
+        <option name="charting.chart.showPercent">true</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.fieldColors">{"Compliant": 0x3fb950, "Non-Compliant": 0xf85149, "Violation": 0xdb6d28, "Unknown": 0x8b949e}</option>
+        <option name="height">250</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+    
+    <panel>
+      <title>📉 Policy Violations Timeline</title>
+      <chart>
+        <search>
+          <query>index=$index_filter$ sourcetype="trellix_epo:policy_compliance"
+| eval host=coalesce('EPOComputerProperties.ComputerName', computerName, host)
+| search $filter_host$ (compliance_status="Non-Compliant" OR compliance_status="Violation")
+| timechart span=1h sum(violation_count) as violations</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="charting.chart">line</option>
+        <option name="charting.chart.nullValueMode">zero</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.legend.placement">none</option>
+        <option name="charting.fieldColors">{"violations": 0xf85149}</option>
+        <option name="height">250</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+    
+    <panel>
+      <title>🚫 Top Violated Policies</title>
+      <chart>
+        <search>
+          <query>index=$index_filter$ sourcetype="trellix_epo:policy_compliance"
+| eval host=coalesce('EPOComputerProperties.ComputerName', computerName, host)
+| search $filter_host$ (compliance_status="Non-Compliant" OR compliance_status="Violation")
+| stats sum(violation_count) as total_violations, dc(host) as affected_hosts by policy_name
+| sort -total_violations
+| head 10</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="charting.chart">bar</option>
+        <option name="charting.chart.showDataLabels">all</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.legend.placement">none</option>
+        <option name="charting.fieldColors">{"total_violations": 0xdb6d28}</option>
+        <option name="height">250</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  
+  <!-- User Activity Section - Requires user_actions input -->
+  <row>
+    <html>
+      <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; padding: 10px 15px; margin: 10px 0;">
+        <strong>User Activity Section</strong> - These panels require the <code>user_actions</code> input to be enabled.
+      </div>
+    </html>
+  </row>
+  
+  <row>
+    <panel>
+      <title>👥 Top Active Users</title>
+      <chart>
+        <search>
+          <query>index=$index_filter$ sourcetype="trellix_epo:user_actions"
+| stats count as action_count by user
+| sort -action_count
+| head 10</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="charting.chart">bar</option>
+        <option name="charting.chart.showDataLabels">all</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.legend.placement">none</option>
+        <option name="charting.fieldColors">{"action_count": 0x1f6feb}</option>
+        <option name="height">250</option>
+        <option name="refresh.display">progressbar</option>
+        <drilldown>
+          <link target="_blank">/app/TA-trellix-epo/search?q=index=$index_filter$ sourcetype="trellix_epo:user_actions" user="$click.value$"</link>
+        </drilldown>
+      </chart>
+    </panel>
+    
+    <panel>
+      <title>📝 Action Types</title>
+      <chart>
+        <search>
+          <query>index=$index_filter$ sourcetype="trellix_epo:user_actions"
+| stats count by action
+| sort -count
+| head 10</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="charting.chart">pie</option>
+        <option name="charting.chart.showPercent">true</option>
+        <option name="charting.drilldown">all</option>
+        <option name="height">250</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+    
+    <panel>
+      <title>⏰ Activity Timeline</title>
+      <chart>
+        <search>
+          <query>index=$index_filter$ sourcetype="trellix_epo:user_actions"
+| timechart span=1h count by result</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="charting.chart">line</option>
+        <option name="charting.chart.nullValueMode">zero</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.legend.placement">bottom</option>
+        <option name="charting.fieldColors">{"success": 0x3fb950, "Success": 0x3fb950, "failure": 0xf85149, "Failure": 0xf85149}</option>
+        <option name="height">250</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  
+  <row>
+    <panel>
+      <title>📜 Recent User Actions</title>
+      <table>
+        <search>
+          <query>index=$index_filter$ sourcetype="trellix_epo:user_actions"
+| sort -_time
+| head 50
+| eval _time=strftime(_time, "%Y-%m-%d %H:%M:%S")
+| table _time, user, action, result, object, src_ip
+| rename _time as "Time", user as "User", action as "Action", result as "Result", object as "Object", src_ip as "Source IP"</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="count">50</option>
+        <option name="drilldown">row</option>
+        <option name="wrap">true</option>
+        <format type="color" field="Result">
+          <colorPalette type="map">{"success":#3fb950,"Success":#3fb950,"failure":#f85149,"Failure":#f85149,"error":#f85149,"Error":#f85149}</colorPalette>
+        </format>
+        <drilldown>
+          <link target="_blank">/app/TA-trellix-epo/search?q=index=$index_filter$ sourcetype="trellix_epo:user_actions" user="$row.User$"</link>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+  
+  <!-- Advanced Analytics Section - Requires threat_events and quarantine_events inputs -->
+  <row>
+    <html>
+      <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; padding: 10px 15px; margin: 10px 0;">
+        <strong>Advanced Analytics Section</strong> - These panels require <code>threat_events</code> and <code>quarantine_events</code> inputs to be enabled.
+      </div>
+    </html>
+  </row>
+  
+  <row>
+    <panel>
+      <title>🗓️ Threat Heatmap (Day/Hour)</title>
+      <chart>
+        <search>
+          <query>index=$index_filter$ sourcetype="trellix_epo:threat_events"
+| eval host=coalesce('EPOComputerProperties.ComputerName', computerName, host)
+| search $filter_host$ severity="$filter_severity$"
+| eval hour=strftime(_time, "%H")
+| eval day=strftime(_time, "%A")
+| stats count as threat_count by day, hour
+| eval day_num=case(day="Sunday", 0, day="Monday", 1, day="Tuesday", 2, day="Wednesday", 3, day="Thursday", 4, day="Friday", 5, day="Saturday", 6)
+| sort day_num, hour
+| fields - day_num
+| xyseries day hour threat_count</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.legend.placement">bottom</option>
+        <option name="height">300</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+    
+    <panel>
+      <title>🔄 Quarantine Actions</title>
+      <chart>
+        <search>
+          <query>index=$index_filter$ sourcetype="trellix_epo:quarantine_events"
+| eval host=coalesce('EPOComputerProperties.ComputerName', computerName, host)
+| search $filter_host$
+| timechart span=1h count by quarantine_action</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="charting.chart">area</option>
+        <option name="charting.chart.nullValueMode">zero</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.legend.placement">bottom</option>
+        <option name="height">300</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  
+  <!-- Footer -->
+  <row>
+    <panel>
+      <html>
+        <div style="text-align: center; padding: 20px; color: #8b949e; font-size: 12px;">
+          <p>Trellix ePO Security Command Center | Data refreshes automatically | Powered by Splunk</p>
+          <p>For configuration help, visit Settings → Data Inputs → Trellix ePO Input</p>
+        </div>
+      </html>
+    </panel>
+  </row>
+</form>

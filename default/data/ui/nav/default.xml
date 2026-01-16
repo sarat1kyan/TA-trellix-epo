@@ -1,0 +1,15 @@
+<nav color="#238636">
+  <view name="trellix_epo_overview" default="true"/>
+  <collection label="Dashboards">
+    <view name="trellix_epo_overview" label="Security Command Center"/>
+    <view name="trellix_epo_syslog_threats" label="Syslog Threat Events"/>
+  </collection>
+  <collection label="Configuration">
+    <view name="setup_page" label="Setup Guide"/>
+    <a href="/manager/TA-trellix-epo/data/inputs/trellix_epo">Manage Inputs</a>
+  </collection>
+  <collection label="Resources">
+    <a href="https://github.com/sarat1kyan/TA-trellix-epo" target="_blank">Documentation</a>
+    <a href="https://github.com/sarat1kyan/TA-trellix-epo/issues" target="_blank">Report Issue</a>
+  </collection>
+</nav>
