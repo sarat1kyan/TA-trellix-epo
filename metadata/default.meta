@@ -1,0 +1,50 @@
+[default]
+access = read : [ * ], write : [ admin, sc_admin ]
+export = system
+
+[app/local]
+access = read : [ * ], write : [ admin, sc_admin ]
+export = none
+
+[default/app]
+export = system
+
+[default/inputs]
+export = system
+
+[default/props]
+export = system
+
+[default/transforms]
+export = system
+
+[default/restmap]
+export = system
+
+[default/eventtypes]
+export = system
+
+[default/tags]
+export = system
+
+[admin:ta_trellix_epo]
+access = read : [ admin, sc_admin ], write : [ admin, sc_admin ]
+export = system
+
+[admin_external:ta_trellix_epo_settings]
+access = read : [ admin, sc_admin ], write : [ admin, sc_admin ]
+export = system
+
+[admin_external:ta_trellix_epo_inputs]
+access = read : [ admin, sc_admin ], write : [ admin, sc_admin ]
+export = system
+
+[ta_trellix_epo_settings]
+access = read : [ admin, sc_admin ], write : [ admin, sc_admin ]
+export = none
+
+[views]
+export = system
+
+[nav]
+export = system

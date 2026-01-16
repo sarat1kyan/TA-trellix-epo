@@ -1,0 +1,471 @@
+<form version="1.1" theme="dark">
+  <label>Trellix ePO Syslog Threat Events</label>
+  <description>Threat event analysis dashboard for Trellix ePO syslog data - Works with any syslog input from ePO</description>
+  
+  <fieldset submitButton="true" autoRun="true">
+    <input type="time" token="time_range">
+      <label>Time Range</label>
+      <default>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+    
+    <input type="dropdown" token="index_filter">
+      <label>Index</label>
+      <choice value="*">All Indexes</choice>
+      <choice value="main">main</choice>
+      <default>*</default>
+      <search>
+        <query>| eventcount summarize=false index=* | dedup index | table index</query>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </search>
+      <fieldForLabel>index</fieldForLabel>
+      <fieldForValue>index</fieldForValue>
+    </input>
+    
+    <input type="dropdown" token="sourcetype_filter">
+      <label>Sourcetype</label>
+      <choice value="*">All Sourcetypes</choice>
+      <default>*</default>
+      <search>
+        <query>index=$index_filter$ | stats count by sourcetype | sort -count | head 50</query>
+        <earliest>$time_range.earliest$</earliest>
+        <latest>$time_range.latest$</latest>
+      </search>
+      <fieldForLabel>sourcetype</fieldForLabel>
+      <fieldForValue>sourcetype</fieldForValue>
+    </input>
+    
+    <input type="text" token="keyword_filter">
+      <label>Keyword Filter (leave empty for all)</label>
+      <default></default>
+      <prefix>(</prefix>
+      <suffix>)</suffix>
+      <initialValue>*</initialValue>
+    </input>
+  </fieldset>
+  
+  <!-- Data Discovery Section -->
+  <row>
+    <panel>
+      <title>📡 Data Discovery - What's Coming In?</title>
+      <html>
+        <p style="color: #ccc; padding: 10px;">
+          <b>Tip:</b> If you don't see ePO data, check your index and sourcetype filters above. 
+          Common ePO syslog sourcetypes include: <code>syslog</code>, <code>mcafee</code>, <code>trellix</code>, <code>epo</code>.
+          Look at the raw events below to identify your data.
+        </p>
+      </html>
+    </panel>
+  </row>
+  
+  <row>
+    <panel>
+      <title>🔢 Event Counts by Sourcetype</title>
+      <chart>
+        <search>
+          <query>index=$index_filter$ sourcetype=$sourcetype_filter$ $keyword_filter$
+| stats count by sourcetype
+| sort -count</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="charting.chart">pie</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+    
+    <panel>
+      <title>📊 Events Over Time</title>
+      <chart>
+        <search>
+          <query>index=$index_filter$ sourcetype=$sourcetype_filter$ $keyword_filter$
+| timechart count by sourcetype</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="charting.chart">line</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  
+  <!-- Key Metrics -->
+  <row>
+    <panel>
+      <title>🚨 Threat Events Overview</title>
+    </panel>
+  </row>
+  
+  <row>
+    <panel>
+      <single>
+        <title>Total Events</title>
+        <search>
+          <query>index=$index_filter$ sourcetype=$sourcetype_filter$ $keyword_filter$
+| stats count</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x53a051","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="rangeValues">[0,100,1000]</option>
+        <option name="showSparkline">true</option>
+        <option name="showTrendIndicator">true</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="unit">events</option>
+        <option name="useColors">true</option>
+      </single>
+    </panel>
+    
+    <panel>
+      <single>
+        <title>Unique Hosts</title>
+        <search>
+          <query>index=$index_filter$ sourcetype=$sourcetype_filter$ $keyword_filter$
+| rex field=_raw "(?i)(?:host|hostname|computer|system|machine|node)[\s]*[=:]+[\s]*[\"']?(?&lt;extracted_host&gt;[^\s\"',;]+)"
+| eval host_val=coalesce(extracted_host, host)
+| stats dc(host_val) as unique_hosts</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x53a051","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="rangeValues">[0,10,50]</option>
+        <option name="showSparkline">false</option>
+        <option name="unit">hosts</option>
+        <option name="useColors">true</option>
+      </single>
+    </panel>
+    
+    <panel>
+      <single>
+        <title>High/Critical Severity</title>
+        <search>
+          <query>index=$index_filter$ sourcetype=$sourcetype_filter$ $keyword_filter$
+| search _raw="*high*" OR _raw="*critical*" OR _raw="*severe*" OR _raw="*urgent*" OR _raw="*High*" OR _raw="*Critical*"
+| stats count</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x53a051","0xf1813f","0xdc4e41"]</option>
+        <option name="rangeValues">[0,10]</option>
+        <option name="showSparkline">false</option>
+        <option name="unit">events</option>
+        <option name="useColors">true</option>
+      </single>
+    </panel>
+    
+    <panel>
+      <single>
+        <title>Unique Threats Detected</title>
+        <search>
+          <query>index=$index_filter$ sourcetype=$sourcetype_filter$ $keyword_filter$
+| rex field=_raw "(?i)(?:threat|malware|virus|trojan|detection)[\s]*[=:]+[\s]*[\"']?(?&lt;threat_name&gt;[^\s\"',;]+)"
+| stats dc(threat_name) as unique_threats</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x53a051","0xf8be34","0xdc4e41"]</option>
+        <option name="rangeValues">[0,5]</option>
+        <option name="showSparkline">false</option>
+        <option name="unit">threats</option>
+        <option name="useColors">true</option>
+      </single>
+    </panel>
+  </row>
+  
+  <!-- Timeline -->
+  <row>
+    <panel>
+      <title>📈 Event Timeline</title>
+      <chart>
+        <search>
+          <query>index=$index_filter$ sourcetype=$sourcetype_filter$ $keyword_filter$
+| timechart count as "Events"</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="charting.chart">area</option>
+        <option name="charting.chart.nullValueMode">zero</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  
+  <!-- Extracted Intelligence -->
+  <row>
+    <panel>
+      <title>🔍 Extracted Threat Intelligence</title>
+    </panel>
+  </row>
+  
+  <row>
+    <panel>
+      <title>Top Hosts with Events</title>
+      <chart>
+        <search>
+          <query>index=$index_filter$ sourcetype=$sourcetype_filter$ $keyword_filter$
+| rex field=_raw "(?i)(?:host|hostname|computer|system|machine|node|src_host|dest_host|dhost|shost)[\s]*[=:]+[\s]*[\"']?(?&lt;extracted_host&gt;[a-zA-Z0-9\._-]+)"
+| eval display_host=coalesce(extracted_host, host, "unknown")
+| stats count as event_count by display_host
+| sort -event_count
+| head 10</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="charting.chart">bar</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+    
+    <panel>
+      <title>Severity Distribution</title>
+      <chart>
+        <search>
+          <query>index=$index_filter$ sourcetype=$sourcetype_filter$ $keyword_filter$
+| rex field=_raw "(?i)(?:severity|sev|risk|priority|level)[\s]*[=:]+[\s]*[\"']?(?&lt;severity_val&gt;[a-zA-Z0-9]+)"
+| eval severity=if(isnull(severity_val), 
+    case(
+        match(_raw, "(?i)(critical|crit|emergency|emerg)"), "Critical",
+        match(_raw, "(?i)(high|major|alert)"), "High",
+        match(_raw, "(?i)(medium|med|warning|warn)"), "Medium",
+        match(_raw, "(?i)(low|minor|info|notice)"), "Low",
+        true(), "Unknown"
+    ), 
+    severity_val)
+| stats count by severity
+| sort -count</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="charting.chart">pie</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  
+  <row>
+    <panel>
+      <title>Top Threat Names / Malware Detected</title>
+      <table>
+        <search>
+          <query>index=$index_filter$ sourcetype=$sourcetype_filter$ $keyword_filter$
+| rex field=_raw "(?i)(?:threat[\s_-]*name|malware[\s_-]*name|virus[\s_-]*name|detection[\s_-]*name|threat|malware|virus|name)[\s]*[=:]+[\s]*[\"']?(?&lt;threat_name&gt;[^\"',;\n\r]+)"
+| rex field=_raw "(?i)(?:category|type|class)[\s]*[=:]+[\s]*[\"']?(?&lt;threat_category&gt;[^\"',;\n\r]+)"
+| search threat_name=*
+| stats count as detections, dc(host) as affected_hosts by threat_name, threat_category
+| sort -detections
+| head 20
+| rename threat_name as "Threat Name", threat_category as "Category", detections as "Detections", affected_hosts as "Affected Hosts"</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="count">20</option>
+        <option name="drilldown">none</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+  
+  <row>
+    <panel>
+      <title>IP Addresses in Events</title>
+      <table>
+        <search>
+          <query>index=$index_filter$ sourcetype=$sourcetype_filter$ $keyword_filter$
+| rex field=_raw "(?&lt;ip_address&gt;\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})"
+| search ip_address=*
+| stats count as occurrences, dc(host) as hosts by ip_address
+| sort -occurrences
+| head 20
+| rename ip_address as "IP Address", occurrences as "Occurrences", hosts as "Unique Hosts"</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="count">20</option>
+        <option name="drilldown">none</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+    
+    <panel>
+      <title>File Hashes (IOCs)</title>
+      <table>
+        <search>
+          <query>index=$index_filter$ sourcetype=$sourcetype_filter$ $keyword_filter$
+| rex field=_raw "(?i)(?:hash|md5|sha1|sha256|checksum)[\s]*[=:]+[\s]*[\"']?(?&lt;file_hash&gt;[a-fA-F0-9]{32,64})"
+| rex field=_raw "(?&lt;file_hash_direct&gt;[a-fA-F0-9]{64}|[a-fA-F0-9]{40}|[a-fA-F0-9]{32})"
+| eval hash=coalesce(file_hash, file_hash_direct)
+| search hash=*
+| stats count as occurrences, values(host) as hosts by hash
+| sort -occurrences
+| head 20
+| rename hash as "File Hash", occurrences as "Occurrences", hosts as "Hosts"</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="count">20</option>
+        <option name="drilldown">none</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+  
+  <row>
+    <panel>
+      <title>File Paths in Events</title>
+      <table>
+        <search>
+          <query>index=$index_filter$ sourcetype=$sourcetype_filter$ $keyword_filter$
+| rex field=_raw "(?i)(?:file|path|filepath|filename|target|object)[\s]*[=:]+[\s]*[\"']?(?&lt;file_path&gt;[a-zA-Z]:\\\\[^\"',;\n\r]+|\/[^\"',;\n\r\s]+)"
+| search file_path=*
+| stats count as occurrences by file_path
+| sort -occurrences
+| head 20
+| rename file_path as "File Path", occurrences as "Occurrences"</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="count">20</option>
+        <option name="drilldown">none</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+  
+  <!-- Recent Events -->
+  <row>
+    <panel>
+      <title>📋 Recent Events (Raw)</title>
+      <html>
+        <p style="color: #aaa; padding: 5px;">
+          Review raw events below to understand your data format. Use this to customize field extractions if needed.
+        </p>
+      </html>
+    </panel>
+  </row>
+  
+  <row>
+    <panel>
+      <title>Latest Events with Extracted Fields</title>
+      <table>
+        <search>
+          <query>index=$index_filter$ sourcetype=$sourcetype_filter$ $keyword_filter$
+| rex field=_raw "(?i)(?:host|hostname|computer|system|machine)[\s]*[=:]+[\s]*[\"']?(?&lt;extracted_host&gt;[^\s\"',;]+)"
+| rex field=_raw "(?i)(?:severity|sev|risk|priority)[\s]*[=:]+[\s]*[\"']?(?&lt;extracted_severity&gt;[^\s\"',;]+)"
+| rex field=_raw "(?i)(?:threat|malware|virus|detection)[\s]*[=:]+[\s]*[\"']?(?&lt;extracted_threat&gt;[^\"',;\n]+)"
+| rex field=_raw "(?i)(?:action|event|status)[\s]*[=:]+[\s]*[\"']?(?&lt;extracted_action&gt;[^\s\"',;]+)"
+| rex field=_raw "(?i)(?:user|username|account)[\s]*[=:]+[\s]*[\"']?(?&lt;extracted_user&gt;[^\s\"',;]+)"
+| rex field=_raw "(?&lt;extracted_ip&gt;\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})"
+| eval display_host=coalesce(extracted_host, host)
+| sort -_time
+| head 100
+| table _time, display_host, extracted_severity, extracted_threat, extracted_action, extracted_user, extracted_ip, sourcetype, _raw
+| rename _time as "Time", display_host as "Host", extracted_severity as "Severity", extracted_threat as "Threat", extracted_action as "Action", extracted_user as "User", extracted_ip as "IP", sourcetype as "Sourcetype", _raw as "Raw Event"</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="count">20</option>
+        <option name="drilldown">none</option>
+        <option name="wrap">true</option>
+        <format type="color" field="Severity">
+          <colorPalette type="map">{"Critical":#DC4E41,"High":#F1813F,"Medium":#F8BE34,"Low":#53A051,"critical":#DC4E41,"high":#F1813F,"medium":#F8BE34,"low":#53A051}</colorPalette>
+        </format>
+      </table>
+    </panel>
+  </row>
+  
+  <!-- Analytics -->
+  <row>
+    <panel>
+      <title>📊 Advanced Analytics</title>
+    </panel>
+  </row>
+  
+  <row>
+    <panel>
+      <title>Events by Hour of Day</title>
+      <chart>
+        <search>
+          <query>index=$index_filter$ sourcetype=$sourcetype_filter$ $keyword_filter$
+| eval hour=strftime(_time, "%H")
+| stats count by hour
+| sort hour</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="charting.chart">column</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+    
+    <panel>
+      <title>Events by Day of Week</title>
+      <chart>
+        <search>
+          <query>index=$index_filter$ sourcetype=$sourcetype_filter$ $keyword_filter$
+| eval day=strftime(_time, "%A")
+| eval day_num=strftime(_time, "%w")
+| stats count by day, day_num
+| sort day_num
+| fields - day_num</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="charting.chart">column</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  
+  <!-- Troubleshooting -->
+  <row>
+    <panel>
+      <title>🔧 Troubleshooting - Sample Raw Events</title>
+      <html>
+        <p style="color: #aaa; padding: 5px;">
+          <b>No data showing?</b> Check: 1) Time range is correct, 2) Index contains your ePO syslog data, 3) Sourcetype matches your syslog input.
+          Copy a sample event from below and share it to get help with field extractions.
+        </p>
+      </html>
+    </panel>
+  </row>
+  
+  <row>
+    <panel>
+      <title>Sample Raw Events (Last 10)</title>
+      <table>
+        <search>
+          <query>index=$index_filter$ sourcetype=$sourcetype_filter$ $keyword_filter$
+| head 10
+| table _time, host, sourcetype, index, _raw</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+        </search>
+        <option name="count">10</option>
+        <option name="drilldown">none</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+</form>
