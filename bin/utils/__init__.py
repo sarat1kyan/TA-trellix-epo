@@ -9,8 +9,25 @@ import os
 import sys
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any, Dict, Optional, Union
+
+# Python 3.2+ has timezone support, but provide fallback for older versions
+try:
+    from datetime import timezone
+    UTC = timezone.utc
+except ImportError:
+    # Fallback for Python < 3.2 (unlikely but safe)
+    import time
+    class _UTC:
+        """Simple UTC timezone implementation"""
+        def utcoffset(self, dt):
+            return datetime.timedelta(0)
+        def tzname(self, dt):
+            return "UTC"
+        def dst(self, dt):
+            return datetime.timedelta(0)
+    UTC = _UTC()
 
 # Configure logging
 logger = logging.getLogger('trellix_epo_utils')
@@ -96,7 +113,7 @@ def format_timestamp(dt: Union[datetime, str, float, None],
         except ValueError:
             return dt
     elif isinstance(dt, (int, float)):
-        dt = datetime.fromtimestamp(dt, tz=timezone.utc)
+        dt = datetime.fromtimestamp(dt, tz=UTC)
     
     if isinstance(dt, datetime):
         return dt.strftime(format_str)

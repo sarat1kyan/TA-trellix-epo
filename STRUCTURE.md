@@ -3,14 +3,15 @@
 ```
 TA-trellix-epo/
 │
-├── app.manifest                          # App manifest metadata (v1.1.2)
+├── app.manifest                          # App manifest metadata (v1.1.4)
 ├── CHANGELOG.md                          # Version history and release notes
 ├── README.md                             # Comprehensive documentation
 ├── STRUCTURE.md                          # This file
 ├── requirements.txt                      # Python dependencies
 │
 ├── bin/                                  # Python scripts directory
-│   ├── trellix_epo_input.py             # Main modular input (Splunk entry point)
+│   ├── trellix_epo.py                   # Main modular input (Splunk entry point)
+│   ├── trellix_epo_input.py             # Modular input implementation
 │   ├── trellix_epo_client.py            # REST API client for ePO
 │   ├── trellix_epo_auth.py              # Authentication handler
 │   ├── configure_credentials.py          # Credential storage utility
@@ -56,7 +57,7 @@ TA-trellix-epo/
 
 ## File Count Summary
 
-- **Python Scripts**: 7 files (3 main + 2 REST handlers + 1 utility + 1 credential tool)
+- **Python Scripts**: 8 files (4 main + 2 REST handlers + 1 utility + 1 credential tool)
 - **Configuration Files**: 8 files (app, inputs, settings, props, transforms, restmap, eventtypes, tags)
 - **XML Files**: 4 files (navigation, 3 dashboards including setup)
 - **CSS Files**: 1 file (custom dashboard styling)

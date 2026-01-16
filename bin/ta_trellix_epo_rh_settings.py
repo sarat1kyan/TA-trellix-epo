@@ -58,16 +58,62 @@ class TrellixEpoSettingsHandler(admin.MConfigHandler):
             for arg in self.GENERAL_FIELDS + self.PROXY_FIELDS:
                 self.supportedArgs.addOptArg(arg)
 
+    def _get_splunk_home(self):
+        """Get SPLUNK_HOME with cross-platform fallback"""
+        splunk_home = os.environ.get("SPLUNK_HOME")
+        if splunk_home:
+            return splunk_home
+        # Cross-platform fallbacks
+        if os.name == 'nt':  # Windows
+            return r"C:\Program Files\Splunk"
+        return "/opt/splunk"
+    
+    def _mark_app_configured(self):
+        """
+        Mark the app as configured by setting is_configured = 1 in app.conf
+        This removes the setup page prompt from Splunk UI.
+        """
+        import logging
+        splunk_home = self._get_splunk_home()
+        local_dir = os.path.join(splunk_home, "etc", "apps", "TA-trellix-epo", "local")
+        app_conf_path = os.path.join(local_dir, "app.conf")
+        
+        try:
+            # Ensure local directory exists
+            if not os.path.exists(local_dir):
+                os.makedirs(local_dir)
+            
+            # Read existing local app.conf if it exists
+            import configparser
+            config = configparser.ConfigParser()
+            if os.path.exists(app_conf_path):
+                config.read(app_conf_path)
+            
+            # Set is_configured = 1
+            if not config.has_section("install"):
+                config.add_section("install")
+            config.set("install", "is_configured", "1")
+            
+            # Write back
+            with open(app_conf_path, "w") as f:
+                config.write(f)
+            
+            logging.info("Marked TA-trellix-epo as configured")
+            
+        except Exception as e:
+            logging.warning(f"Could not mark app as configured: {str(e)}")
+
     def handleList(self, confInfo):
         """
         Handle list request - returns current settings.
         """
         conf_file = "ta_trellix_epo_settings"
+        splunk_home = self._get_splunk_home()
         
         try:
             # Read the conf file
             conf_path = os.path.join(
-                os.environ.get("SPLUNK_HOME", "/opt/splunk"),
+                splunk_home,
                 "etc", "apps", "TA-trellix-epo", "local",
                 f"{conf_file}.conf"
             )
@@ -75,7 +121,7 @@ class TrellixEpoSettingsHandler(admin.MConfigHandler):
             # Try local first, then default
             if not os.path.exists(conf_path):
                 conf_path = os.path.join(
-                    os.environ.get("SPLUNK_HOME", "/opt/splunk"),
+                    splunk_home,
                     "etc", "apps", "TA-trellix-epo", "default",
                     f"{conf_file}.conf"
                 )
@@ -112,6 +158,7 @@ class TrellixEpoSettingsHandler(admin.MConfigHandler):
     def handleEdit(self, confInfo):
         """
         Handle edit request - updates settings.
+        Also marks the app as configured when epo_server and username are set.
         """
         conf_file = "ta_trellix_epo_settings"
         
@@ -128,6 +175,10 @@ class TrellixEpoSettingsHandler(admin.MConfigHandler):
         # Write to conf file
         if args:
             self.writeConf(conf_file, stanza_name, args)
+            
+            # If we're updating general stanza with epo_server, mark app as configured
+            if stanza_name == "general" and "epo_server" in args:
+                self._mark_app_configured()
 
     def handleCreate(self, confInfo):
         """

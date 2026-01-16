@@ -36,6 +36,16 @@ from urllib.parse import urlencode, quote
 # Add bin directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
 
+# Add Splunk's Python library paths (for requests, urllib3, etc.)
+SPLUNK_HOME = os.environ.get('SPLUNK_HOME', '/opt/splunk')
+splunk_lib_paths = [
+    os.path.join(SPLUNK_HOME, 'lib', 'python3.9', 'site-packages'),
+    os.path.join(SPLUNK_HOME, 'lib', 'python3.7', 'site-packages'),
+]
+for lib_path in splunk_lib_paths:
+    if os.path.isdir(lib_path) and lib_path not in sys.path:
+        sys.path.insert(0, lib_path)
+
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
@@ -71,19 +81,51 @@ class TrellixEPOClient:
     """
     
     # Standard ePO API commands
+    # Note: Trellix ePO uses text-based responses with "OK:" prefix
+    # Most data retrieval uses system.find and core.executeQuery
     API_COMMANDS = {
         'authenticate': 'core.authenticate',
-        'system_info': 'core.systemInfo',
         'system_find': 'system.find',
         'system_tree': 'system.findGroups',
-        'threat_events': 'epo.threat.detection',
-        'malware_detections': 'epo.threat.malware',
-        'policy_compliance': 'epo.compliance.query',
-        'quarantine': 'epo.quarantine.query',
-        'audit': 'epo.audit.query',
-        'dat_updates': 'epo.dat.query',
-        'client_tasks': 'epo.clienttask.find',
-        'agent_handler': 'agenthandler.query',
+        'list_queries': 'core.listQueries',
+        'execute_query': 'core.executeQuery',
+        'list_tables': 'core.listTables',
+        'client_tasks': 'clienttask.find',
+        'agent_handlers': 'agentmgmt.listAgentHandlers',
+        'core_help': 'core.help',
+    }
+    
+    # Field name mappings from ePO text format to normalized format
+    # ePO returns "System Name" but we want "computerName" for CIM
+    FIELD_MAPPINGS = {
+        'System Name': 'computerName',
+        'System Location': 'systemLocation',
+        'IP address': 'ipAddress',
+        'IP4 Address (deprecated)': 'ipv4Address',
+        'User Name': 'userName',
+        'Domain Name': 'domainName',
+        'DNS Name': 'dnsName',
+        'OS Type': 'osType',
+        'OS Version': 'osVersion',
+        'OS Platform': 'osPlatform',
+        'OS Build Number': 'osBuildNumber',
+        'MAC Address': 'macAddress',
+        'CPU Type': 'cpuType',
+        'CPU Speed (MHz)': 'cpuSpeed',
+        'Number Of CPUs': 'cpuCount',
+        'Total Physical Memory': 'totalMemory',
+        'Free Memory': 'freeMemory',
+        'Free Disk Space': 'freeDiskSpace',
+        'Total Disk Space': 'totalDiskSpace',
+        'Is 64-bit OS': 'is64Bit',
+        'Agent Handler': 'agentHandler',
+        'Last Communication': 'lastCommunication',
+        'Tags': 'tags',
+        'Excluded Tags': 'excludedTags',
+        'Custom 1': 'custom1',
+        'Custom 2': 'custom2',
+        'Custom 3': 'custom3',
+        'Custom 4': 'custom4',
     }
     
     def __init__(self, auth_handler: TrellixEPOAuth, session_key: str = None, 
@@ -126,30 +168,116 @@ class TrellixEPOClient:
         """
         Parse ePO API response which may have 'OK:' prefix
         
-        ePO API often returns responses in format: OK:{"result": [...]}
+        ePO API returns responses in text format:
+        OK:
+        Field1: Value1
+        Field2: Value2
+        
+        Or sometimes JSON after OK:
         
         Args:
             response_text: Raw response text from API
             
         Returns:
-            Parsed JSON data
+            Parsed data (list of dicts for multi-record, dict for single, or raw text)
         """
         text = response_text.strip()
         
         # Handle ePO prefix format (OK:, ERROR:, etc.)
         if text.startswith('OK:'):
             text = text[3:].strip()
-        elif text.startswith('ERROR:'):
-            error_msg = text[6:].strip()
+        elif text.startswith('ERROR:') or text.startswith('Error'):
+            error_msg = text.split(':', 1)[1].strip() if ':' in text else text
             raise TrellixEPOClientError(f"ePO API Error: {error_msg}")
         
-        # Try to parse as JSON
+        # Try to parse as JSON first
         try:
             data = json.loads(text)
             return data
         except json.JSONDecodeError:
-            # Return as-is if not valid JSON
-            return text
+            pass
+        
+        # Parse text format (key: value pairs, separated by blank lines for records)
+        return self._parse_text_response(text)
+    
+    def _parse_text_response(self, text: str) -> List[Dict]:
+        """
+        Parse ePO text format response into list of dictionaries
+        
+        Format:
+        Field1: Value1
+        Field2: Value2
+        
+        Field1: Value3
+        Field2: Value4
+        
+        Args:
+            text: Text response from ePO
+            
+        Returns:
+            List of dictionaries, one per record
+        """
+        records = []
+        current_record = {}
+        
+        for line in text.split('\n'):
+            line = line.strip()
+            
+            # Empty line indicates new record
+            if not line:
+                if current_record:
+                    records.append(self._normalize_record(current_record))
+                    current_record = {}
+                continue
+            
+            # Parse "Key: Value" format
+            if ':' in line:
+                # Handle case where value might contain colons (like IP addresses)
+                parts = line.split(':', 1)
+                if len(parts) == 2:
+                    key = parts[0].strip()
+                    value = parts[1].strip()
+                    
+                    # Handle "null" and "N/A" values
+                    if value.lower() in ('null', 'n/a', ''):
+                        value = None
+                    
+                    current_record[key] = value
+        
+        # Don't forget the last record
+        if current_record:
+            records.append(self._normalize_record(current_record))
+        
+        return records
+    
+    def _normalize_record(self, record: Dict) -> Dict:
+        """
+        Normalize field names in a record using FIELD_MAPPINGS
+        
+        Args:
+            record: Dictionary with original field names
+            
+        Returns:
+            Dictionary with normalized field names
+        """
+        normalized = {}
+        for key, value in record.items():
+            # Use mapped name if available, otherwise convert to camelCase
+            if key in self.FIELD_MAPPINGS:
+                normalized_key = self.FIELD_MAPPINGS[key]
+            else:
+                # Convert "Field Name" to "fieldName"
+                words = key.split()
+                if words:
+                    normalized_key = words[0].lower() + ''.join(w.capitalize() for w in words[1:])
+                else:
+                    normalized_key = key
+            
+            normalized[normalized_key] = value
+            # Also keep original key for reference
+            normalized[key] = value
+        
+        return normalized
     
     def _make_request(self, command: str, params: Dict = None, method: str = 'GET',
                       attempt: int = 1) -> Any:
@@ -170,12 +298,9 @@ class TrellixEPOClient:
         """
         self._rate_limit()
         
-        # Authenticate if no token available
-        if not self.auth.token:
-            try:
-                self.auth.authenticate(self.session_key)
-            except TrellixEPOAuthError as e:
-                raise TrellixEPOClientError(f"Authentication failed: {str(e)}")
+        # Validate we have credentials (basic auth is used on every request)
+        if not self.auth.username or not self.auth.password:
+            raise TrellixEPOClientError("No credentials configured - set username and password")
         
         # Build request URL
         url = f"{self.base_url}/{command}"
@@ -191,18 +316,24 @@ class TrellixEPOClient:
         
         logger.debug(f"Making request to {command} (attempt {attempt})")
         
+        # Use requests' built-in basic auth
+        from requests.auth import HTTPBasicAuth
+        auth = HTTPBasicAuth(self.auth.username, self.auth.password)
+        
         try:
             if method.upper() == 'POST':
                 response = self.session.post(
                     url,
-                    headers=headers,
+                    auth=auth,
+                    headers={'Accept': 'application/json', 'Content-Type': 'application/json'},
                     json=request_params,
                     timeout=self.timeout
                 )
             else:
                 response = self.session.get(
                     url,
-                    headers=headers,
+                    auth=auth,
+                    headers={'Accept': 'application/json'},
                     params=request_params,
                     timeout=self.timeout
                 )
@@ -221,13 +352,8 @@ class TrellixEPOClient:
             
             # Handle authentication errors (401)
             if response.status_code == 401:
-                if attempt < 2:  # Only retry once for auth
-                    logger.info("Authentication expired, refreshing token...")
-                    self.auth.token = None
-                    self.auth.authenticate(self.session_key)
-                    return self._make_request(command, params, method, attempt + 1)
                 raise TrellixEPOClientError(
-                    "Authentication failed after token refresh",
+                    "Authentication failed - check username and password",
                     status_code=401
                 )
             
@@ -352,142 +478,172 @@ class TrellixEPOClient:
         
         return normalized
     
+    def get_available_queries(self) -> List[Dict]:
+        """
+        List all available queries in ePO
+        
+        Returns:
+            List of query dictionaries with id, name, description
+        """
+        try:
+            result = self._make_request('core.listQueries', {})
+            
+            if isinstance(result, list):
+                return result
+            elif isinstance(result, str):
+                # Parse text format
+                return self._parse_query_list(result)
+            return []
+        except Exception as e:
+            logger.error(f"Error listing queries: {str(e)}")
+            return []
+    
+    def _parse_query_list(self, text: str) -> List[Dict]:
+        """Parse core.listQueries text response into list of query dicts"""
+        queries = []
+        current_query = {}
+        
+        for line in text.split('\n'):
+            line = line.strip()
+            if not line:
+                if current_query and 'Id' in current_query:
+                    queries.append(current_query)
+                    current_query = {}
+                continue
+            
+            if ':' in line:
+                key, value = line.split(':', 1)
+                current_query[key.strip()] = value.strip()
+        
+        if current_query and 'Id' in current_query:
+            queries.append(current_query)
+        
+        return queries
+    
+    def execute_query(self, query_id: int) -> List[Dict]:
+        """
+        Execute a saved query by ID
+        
+        Args:
+            query_id: The query ID from core.listQueries
+            
+        Returns:
+            List of result dictionaries
+        """
+        try:
+            result = self._make_request('core.executeQuery', {'queryId': query_id})
+            
+            if isinstance(result, list):
+                return result
+            elif isinstance(result, str):
+                return self._parse_text_response(result)
+            return []
+        except TrellixEPOClientError as e:
+            logger.error(f"Error executing query {query_id}: {str(e)}")
+            return []
+    
     def get_threat_events(self, start_time: Union[datetime, str] = None, 
                           end_time: Union[datetime, str] = None, 
-                          limit: int = 1000) -> List[Dict]:
+                          limit: int = 1000,
+                          query_id: int = None) -> List[Dict]:
         """
         Retrieve threat detection events from ePO
         
-        Gets threat events including viruses, malware, and other security threats
-        detected by endpoint protection.
+        Note: Trellix ePO may require a saved query for threat events.
+        If query_id is provided, uses core.executeQuery.
+        Otherwise attempts to find threat-related queries automatically.
         
         Args:
             start_time: Start time filter (datetime or ISO string)
             end_time: End time filter (datetime or ISO string)
             limit: Maximum number of results (default: 1000)
+            query_id: Optional specific query ID to execute
             
         Returns:
-            List of threat event dictionaries with fields:
-            - detectionId: Unique detection identifier
-            - threatName: Name of the detected threat
-            - threatType: Type/category of threat
-            - severity: Severity level (Low, Medium, High, Critical)
-            - computerName: Affected computer name
-            - ipAddress: IP address of affected system
-            - detectedUTC: Detection timestamp in UTC
+            List of threat event dictionaries
         """
-        params = {
-            ':output': 'json',
-            'limit': limit
-        }
-        
-        if start_time:
-            params['startTime'] = self._normalize_time_param(start_time)
-        if end_time:
-            params['endTime'] = self._normalize_time_param(end_time)
-        
-        try:
-            # Try primary threat detection command
-            result = self._make_request(self.API_COMMANDS.get('threat_events', 'epo.threat.detection'), params)
-            
-            # Normalize result to list
-            if result is None:
-                return []
-            if isinstance(result, list):
-                events = result
-            elif isinstance(result, dict):
-                events = [result] if result else []
-            else:
-                logger.warning(f"Unexpected threat events response type: {type(result)}")
-                return []
-            
-            return self._normalize_events(events, 'threat_events')
-                
-        except TrellixEPOClientError as e:
-            logger.error(f"Error retrieving threat events: {str(e)}")
-            # Try fallback query if primary fails
+        # If specific query_id provided, use it
+        if query_id:
             try:
-                return self._get_threat_events_fallback(start_time, end_time, limit)
-            except Exception:
-                return []
-        except Exception as e:
-            logger.error(f"Unexpected error retrieving threat events: {str(e)}")
-            return []
-    
-    def _get_threat_events_fallback(self, start_time=None, end_time=None, limit=1000):
-        """Fallback method for threat events using alternative queries"""
-        # Try using core query with threat filter
-        params = {
-            ':output': 'json',
-            'limit': limit,
-            'searchText': 'threat'
-        }
-        try:
-            result = self._make_request('core.executeQuery', params)
-            if isinstance(result, list):
+                result = self.execute_query(query_id)
                 return self._normalize_events(result, 'threat_events')
-        except:
-            pass
-        return []
+            except Exception as e:
+                logger.error(f"Error executing threat query {query_id}: {str(e)}")
+                return []
+        
+        # Try to find threat-related queries automatically
+        try:
+            queries = self.get_available_queries()
+            threat_keywords = ['threat', 'malware', 'virus', 'detection', 'attack', 'security']
+            
+            for query in queries:
+                name = query.get('Name', '').lower()
+                desc = query.get('Description', '').lower()
+                
+                if any(kw in name or kw in desc for kw in threat_keywords):
+                    qid = query.get('Id')
+                    if qid:
+                        logger.info(f"Found threat query: {query.get('Name')} (ID: {qid})")
+                        result = self.execute_query(int(qid))
+                        if result:
+                            return self._normalize_events(result, 'threat_events')
+            
+            logger.warning("No threat-related queries found in ePO. Create a threat query in ePO console.")
+            return []
+            
+        except Exception as e:
+            logger.error(f"Error retrieving threat events: {str(e)}")
+            return []
     
     def get_malware_detections(self, start_time: Union[datetime, str] = None, 
                                 end_time: Union[datetime, str] = None, 
-                                limit: int = 1000) -> List[Dict]:
+                                limit: int = 1000,
+                                query_id: int = None) -> List[Dict]:
         """
         Retrieve malware detection events from ePO
         
-        Gets detailed malware detection events including file information,
-        detection action, and affected system details.
+        Note: Uses saved queries in ePO. If no query_id provided,
+        searches for malware-related queries automatically.
         
         Args:
             start_time: Start time filter (datetime or ISO string)
             end_time: End time filter (datetime or ISO string)
             limit: Maximum number of results (default: 1000)
+            query_id: Optional specific query ID to execute
             
         Returns:
-            List of malware detection dictionaries with fields:
-            - malwareName: Name of the detected malware
-            - malwareType: Type/category of malware
-            - filePath: Path to the infected file
-            - fileHash: MD5/SHA hash of the file
-            - threatId: Associated threat identifier
-            - computerName: Affected computer name
-            - userName: User context when detected
-            - detectedUTC: Detection timestamp in UTC
-            - action: Action taken (cleaned, deleted, quarantined)
+            List of malware detection dictionaries
         """
-        params = {
-            ':output': 'json',
-            'limit': limit
-        }
+        if query_id:
+            try:
+                result = self.execute_query(query_id)
+                return self._normalize_events(result, 'malware_detections')
+            except Exception as e:
+                logger.error(f"Error executing malware query {query_id}: {str(e)}")
+                return []
         
-        if start_time:
-            params['startTime'] = self._normalize_time_param(start_time)
-        if end_time:
-            params['endTime'] = self._normalize_time_param(end_time)
-        
+        # Try to find malware-related queries
         try:
-            result = self._make_request(
-                self.API_COMMANDS.get('malware_detections', 'epo.threat.malware'), 
-                params
-            )
+            queries = self.get_available_queries()
+            malware_keywords = ['malware', 'virus', 'trojan', 'infection', 'detected']
             
-            if result is None:
-                return []
-            if isinstance(result, list):
-                events = result
-            elif isinstance(result, dict):
-                events = [result] if result else []
-            else:
-                return []
-            
-            return self._normalize_events(events, 'malware_detections')
+            for query in queries:
+                name = query.get('Name', '').lower()
+                desc = query.get('Description', '').lower()
                 
-        except TrellixEPOClientError as e:
-            logger.error(f"Error retrieving malware detections: {str(e)}")
+                if any(kw in name or kw in desc for kw in malware_keywords):
+                    qid = query.get('Id')
+                    if qid:
+                        logger.info(f"Found malware query: {query.get('Name')} (ID: {qid})")
+                        result = self.execute_query(int(qid))
+                        if result:
+                            return self._normalize_events(result, 'malware_detections')
+            
+            logger.warning("No malware-related queries found in ePO.")
             return []
+            
         except Exception as e:
-            logger.error(f"Unexpected error retrieving malware detections: {str(e)}")
+            logger.error(f"Error retrieving malware detections: {str(e)}")
             return []
     
     def get_host_status(self, limit: int = 1000, 
@@ -495,362 +651,308 @@ class TrellixEPOClient:
         """
         Retrieve host/system status information from ePO
         
-        Gets system information including OS details, agent version,
-        DAT version, and last update times.
+        Uses system.find command which returns text format:
+        System Name: HOSTNAME
+        IP address: 192.168.x.x
+        OS Type: Windows 11
+        Last Communication: 1/15/26 5:40:12 PM AMT
         
         Args:
             limit: Maximum number of results (default: 1000)
             search_filter: Optional filter for host names/IPs
             
         Returns:
-            List of host status dictionaries with fields:
-            - computerName: Computer/hostname
-            - operatingSystem: OS name and version
-            - ipAddress: IP address
-            - agentVersion: ePO agent version
-            - datVersion: DAT/signature version
-            - engineVersion: Scan engine version
-            - lastUpdateTime: Last DAT update timestamp
-            - agentStatus: Current agent status
-            - managed: Whether system is managed by ePO
+            List of host status dictionaries with normalized fields
         """
-        params = {
-            ':output': 'json',
-            'limit': limit
-        }
+        params = {}
         
-        if search_filter:
-            params['searchText'] = search_filter
+        # searchText is required for system.find, use empty string for all
+        params['searchText'] = search_filter if search_filter else ''
         
         try:
-            # Try primary systemInfo command
-            result = self._make_request(
-                self.API_COMMANDS.get('system_info', 'core.systemInfo'), 
-                params
-            )
+            result = self._make_request('system.find', params)
             
             if result is None:
-                return self._get_systems_fallback(limit, search_filter)
+                return []
+            
+            # Result should be a list of dicts from _parse_text_response
             if isinstance(result, list):
                 events = result
             elif isinstance(result, dict):
                 events = [result] if result else []
+            elif isinstance(result, str):
+                # If still a string, try parsing again
+                events = self._parse_text_response(result)
             else:
-                return self._get_systems_fallback(limit, search_filter)
+                logger.warning(f"Unexpected host status response type: {type(result)}")
+                return []
             
             return self._normalize_events(events, 'host_status')
                 
         except TrellixEPOClientError as e:
-            logger.warning(f"Primary host status query failed: {str(e)}")
-            return self._get_systems_fallback(limit, search_filter)
+            logger.error(f"Error retrieving host status: {str(e)}")
+            return []
         except Exception as e:
             logger.error(f"Unexpected error retrieving host status: {str(e)}")
-            return []
-    
-    def _get_systems_fallback(self, limit: int = 1000, 
-                              search_filter: str = None) -> List[Dict]:
-        """
-        Fallback method to get systems using system.find command
-        
-        Args:
-            limit: Maximum number of results
-            search_filter: Optional search filter
-            
-        Returns:
-            List of system dictionaries
-        """
-        params = {
-            ':output': 'json',
-            'limit': limit
-        }
-        
-        if search_filter:
-            params['searchText'] = search_filter
-        else:
-            params['searchText'] = ''
-        
-        try:
-            result = self._make_request(
-                self.API_COMMANDS.get('system_find', 'system.find'), 
-                params
-            )
-            
-            if isinstance(result, list):
-                return self._normalize_events(result, 'host_status')
-            elif isinstance(result, dict):
-                return self._normalize_events([result], 'host_status') if result else []
-            return []
-            
-        except Exception as e:
-            logger.error(f"Fallback system retrieval failed: {str(e)}")
             return []
     
     def get_agent_status(self, limit: int = 1000) -> List[Dict]:
         """
         Retrieve ePO agent status information
         
-        Gets agent connectivity status, version information,
-        and last communication times.
+        Uses system.find which includes Last Communication time and Agent Handler.
         
         Args:
             limit: Maximum number of results (default: 1000)
             
         Returns:
-            List of agent status dictionaries with fields:
+            List of agent status dictionaries with fields from system.find:
             - computerName: Computer/hostname
-            - agentVersion: Agent version
-            - agentStatus: Connection status (Active, Inactive)
-            - lastCommunicationTime: Last agent check-in time
+            - lastCommunication: Last agent check-in time
+            - agentHandler: Agent handler ID
             - tags: Assigned system tags
-            - nodeId: ePO node identifier
         """
-        params = {
-            ':output': 'json',
-            'limit': limit
-        }
-        
+        # Agent status comes from system.find - same data, different context
         try:
-            # Try client task find for agent info
-            result = self._make_request(
-                self.API_COMMANDS.get('client_tasks', 'epo.clienttask.find'), 
-                params
-            )
+            result = self._make_request('system.find', {'searchText': ''})
             
             if result is None:
                 return []
+            
             if isinstance(result, list):
                 events = result
-            elif isinstance(result, dict):
-                events = [result] if result else []
+            elif isinstance(result, str):
+                events = self._parse_text_response(result)
             else:
-                return []
+                events = []
+            
+            # Add agent-specific metadata
+            for event in events:
+                event['epo_event_type'] = 'agent_status'
+                # Determine agent status based on last communication
+                last_comm = event.get('lastCommunication') or event.get('Last Communication')
+                if last_comm:
+                    event['agentStatus'] = 'Active'  # Has communicated
+                else:
+                    event['agentStatus'] = 'Unknown'
             
             return self._normalize_events(events, 'agent_status')
                 
-        except TrellixEPOClientError as e:
-            logger.error(f"Error retrieving agent status: {str(e)}")
-            # Try using system.find as fallback for basic agent info
-            return self._get_systems_fallback(limit)
         except Exception as e:
-            logger.error(f"Unexpected error retrieving agent status: {str(e)}")
+            logger.error(f"Error retrieving agent status: {str(e)}")
             return []
     
     def get_policy_compliance(self, start_time: Union[datetime, str] = None, 
                                end_time: Union[datetime, str] = None, 
-                               limit: int = 1000) -> List[Dict]:
+                               limit: int = 1000,
+                               query_id: int = None) -> List[Dict]:
         """
         Retrieve policy compliance information from ePO
         
-        Gets policy compliance status for managed systems including
-        violations, non-compliance events, and policy status.
+        Uses saved queries. Query ID 4 is typically "Policy Assignment Change History".
         
         Args:
             start_time: Start time filter (datetime or ISO string)
             end_time: End time filter (datetime or ISO string)
             limit: Maximum number of results (default: 1000)
+            query_id: Optional specific query ID (default: tries to find policy queries)
             
         Returns:
-            List of policy compliance dictionaries with fields:
-            - computerName: Computer/hostname
-            - policyName: Name of the policy
-            - complianceStatus: Status (Compliant, Non-Compliant, Unknown)
-            - violationCount: Number of violations
-            - checkedUTC: Last compliance check timestamp
-            - policyVersion: Version of the policy
+            List of policy compliance dictionaries
         """
-        params = {
-            ':output': 'json',
-            'limit': limit
-        }
-        
-        if start_time:
-            params['startTime'] = self._normalize_time_param(start_time)
-        if end_time:
-            params['endTime'] = self._normalize_time_param(end_time)
+        # Try query ID 4 first (Policy Assignment Change History based on user's ePO)
+        if query_id is None:
+            query_id = 4  # Default to policy history query shown in user's ePO
         
         try:
-            result = self._make_request(
-                self.API_COMMANDS.get('policy_compliance', 'epo.compliance.query'), 
-                params
-            )
-            
-            if result is None:
-                return []
-            if isinstance(result, list):
-                events = result
-            elif isinstance(result, dict):
-                events = [result] if result else []
-            else:
-                return []
-            
-            return self._normalize_events(events, 'policy_compliance')
-                
-        except TrellixEPOClientError as e:
-            logger.error(f"Error retrieving policy compliance: {str(e)}")
-            return []
+            result = self.execute_query(query_id)
+            if result:
+                return self._normalize_events(result, 'policy_compliance')
         except Exception as e:
-            logger.error(f"Unexpected error retrieving policy compliance: {str(e)}")
+            logger.debug(f"Query {query_id} failed: {str(e)}")
+        
+        # Try to find policy-related queries
+        try:
+            queries = self.get_available_queries()
+            policy_keywords = ['policy', 'compliance', 'assignment', 'violation']
+            
+            for query in queries:
+                name = query.get('Name', '').lower()
+                desc = query.get('Description', '').lower()
+                
+                if any(kw in name or kw in desc for kw in policy_keywords):
+                    qid = query.get('Id')
+                    if qid and int(qid) != query_id:  # Skip already tried
+                        logger.info(f"Found policy query: {query.get('Name')} (ID: {qid})")
+                        result = self.execute_query(int(qid))
+                        if result:
+                            return self._normalize_events(result, 'policy_compliance')
+            
+            logger.warning("No policy compliance data retrieved.")
+            return []
+            
+        except Exception as e:
+            logger.error(f"Error retrieving policy compliance: {str(e)}")
             return []
     
     def get_quarantine_events(self, start_time: Union[datetime, str] = None, 
                                end_time: Union[datetime, str] = None, 
-                               limit: int = 1000) -> List[Dict]:
+                               limit: int = 1000,
+                               query_id: int = None) -> List[Dict]:
         """
         Retrieve quarantine events from ePO
         
-        Gets quarantine actions including files that were quarantined,
-        restored, or deleted.
+        Uses saved queries. Searches for quarantine-related queries.
         
         Args:
             start_time: Start time filter (datetime or ISO string)
             end_time: End time filter (datetime or ISO string)
             limit: Maximum number of results (default: 1000)
+            query_id: Optional specific query ID
             
         Returns:
-            List of quarantine event dictionaries with fields:
-            - computerName: Computer/hostname
-            - filePath: Path to the quarantined file
-            - fileHash: File hash (MD5/SHA)
-            - action: Quarantine action (quarantined, restored, deleted)
-            - quarantinedUTC: Quarantine timestamp
-            - threatName: Associated threat name
+            List of quarantine event dictionaries
         """
-        params = {
-            ':output': 'json',
-            'limit': limit
-        }
+        if query_id:
+            try:
+                result = self.execute_query(query_id)
+                return self._normalize_events(result, 'quarantine_events')
+            except Exception as e:
+                logger.error(f"Error executing quarantine query {query_id}: {str(e)}")
+                return []
         
-        if start_time:
-            params['startTime'] = self._normalize_time_param(start_time)
-        if end_time:
-            params['endTime'] = self._normalize_time_param(end_time)
-        
+        # Try to find quarantine-related queries
         try:
-            result = self._make_request(
-                self.API_COMMANDS.get('quarantine', 'epo.quarantine.query'), 
-                params
-            )
+            queries = self.get_available_queries()
+            quarantine_keywords = ['quarantine', 'quarantined', 'isolated']
             
-            if result is None:
-                return []
-            if isinstance(result, list):
-                events = result
-            elif isinstance(result, dict):
-                events = [result] if result else []
-            else:
-                return []
-            
-            return self._normalize_events(events, 'quarantine_events')
+            for query in queries:
+                name = query.get('Name', '').lower()
+                desc = query.get('Description', '').lower()
                 
-        except TrellixEPOClientError as e:
+                if any(kw in name or kw in desc for kw in quarantine_keywords):
+                    qid = query.get('Id')
+                    if qid:
+                        logger.info(f"Found quarantine query: {query.get('Name')} (ID: {qid})")
+                        result = self.execute_query(int(qid))
+                        if result:
+                            return self._normalize_events(result, 'quarantine_events')
+            
+            logger.warning("No quarantine queries found in ePO.")
+            return []
+            
+        except Exception as e:
             logger.error(f"Error retrieving quarantine events: {str(e)}")
             return []
-        except Exception as e:
-            logger.error(f"Unexpected error retrieving quarantine events: {str(e)}")
-            return []
     
-    def get_updates(self, limit: int = 1000) -> List[Dict]:
+    def get_updates(self, limit: int = 1000, query_id: int = None) -> List[Dict]:
         """
         Retrieve DAT/engine update information from ePO
         
-        Gets signature and engine update status for managed systems.
+        Uses system.find which includes basic system info.
+        For detailed DAT info, use a saved query.
         
         Args:
             limit: Maximum number of results (default: 1000)
+            query_id: Optional specific query ID for DAT details
             
         Returns:
-            List of update dictionaries with fields:
-            - computerName: Computer/hostname
-            - datVersion: DAT/signature version number
-            - engineVersion: Scan engine version
-            - updateStatus: Update status
-            - lastUpdateTime: Last successful update timestamp
-            - pendingUpdates: Number of pending updates
+            List of update dictionaries from system.find
         """
-        params = {
-            ':output': 'json',
-            'limit': limit
-        }
+        if query_id:
+            try:
+                result = self.execute_query(query_id)
+                return self._normalize_events(result, 'updates')
+            except Exception as e:
+                logger.error(f"Error executing updates query {query_id}: {str(e)}")
         
+        # Try to find DAT/update-related queries
         try:
-            result = self._make_request(
-                self.API_COMMANDS.get('dat_updates', 'epo.dat.query'), 
-                params
-            )
+            queries = self.get_available_queries()
+            update_keywords = ['dat', 'update', 'signature', 'version', 'engine']
             
-            if result is None:
-                return []
+            for query in queries:
+                name = query.get('Name', '').lower()
+                desc = query.get('Description', '').lower()
+                
+                if any(kw in name or kw in desc for kw in update_keywords):
+                    qid = query.get('Id')
+                    if qid:
+                        logger.info(f"Found update query: {query.get('Name')} (ID: {qid})")
+                        result = self.execute_query(int(qid))
+                        if result:
+                            return self._normalize_events(result, 'updates')
+        except Exception as e:
+            logger.debug(f"Query search failed: {str(e)}")
+        
+        # Fallback: use system.find data (has basic system info)
+        try:
+            result = self._make_request('system.find', {'searchText': ''})
+            
             if isinstance(result, list):
                 events = result
-            elif isinstance(result, dict):
-                events = [result] if result else []
+            elif isinstance(result, str):
+                events = self._parse_text_response(result)
             else:
                 return []
             
             return self._normalize_events(events, 'updates')
-                
-        except TrellixEPOClientError as e:
-            logger.error(f"Error retrieving updates: {str(e)}")
-            return []
+            
         except Exception as e:
-            logger.error(f"Unexpected error retrieving updates: {str(e)}")
+            logger.error(f"Error retrieving updates: {str(e)}")
             return []
     
     def get_user_actions(self, start_time: Union[datetime, str] = None, 
                           end_time: Union[datetime, str] = None, 
-                          limit: int = 1000) -> List[Dict]:
+                          limit: int = 1000,
+                          query_id: int = None) -> List[Dict]:
         """
         Retrieve user action audit logs from ePO
         
-        Gets audit trail of user activities in the ePO console including
-        logins, policy changes, and administrative actions.
+        Uses saved queries that target OrionAuditLog table.
+        Query ID 4 is "Policy Assignment Change History by User".
         
         Args:
             start_time: Start time filter (datetime or ISO string)
             end_time: End time filter (datetime or ISO string)
             limit: Maximum number of results (default: 1000)
+            query_id: Optional specific query ID
             
         Returns:
-            List of user action dictionaries with fields:
-            - userName: User who performed the action
-            - action: Action type (login, modify, create, delete)
-            - objectName: Target object of the action
-            - result: Action result (success, failure)
-            - sourceIP: Source IP address
-            - timestampUTC: Action timestamp in UTC
+            List of user action dictionaries
         """
-        params = {
-            ':output': 'json',
-            'limit': limit
-        }
+        if query_id:
+            try:
+                result = self.execute_query(query_id)
+                return self._normalize_events(result, 'user_actions')
+            except Exception as e:
+                logger.error(f"Error executing audit query {query_id}: {str(e)}")
+                return []
         
-        if start_time:
-            params['startTime'] = self._normalize_time_param(start_time)
-        if end_time:
-            params['endTime'] = self._normalize_time_param(end_time)
-        
+        # Try to find audit-related queries
         try:
-            result = self._make_request(
-                self.API_COMMANDS.get('audit', 'epo.audit.query'), 
-                params
-            )
+            queries = self.get_available_queries()
+            audit_keywords = ['audit', 'user', 'action', 'history', 'log', 'activity']
             
-            if result is None:
-                return []
-            if isinstance(result, list):
-                events = result
-            elif isinstance(result, dict):
-                events = [result] if result else []
-            else:
-                return []
-            
-            return self._normalize_events(events, 'user_actions')
+            for query in queries:
+                name = query.get('Name', '').lower()
+                desc = query.get('Description', '').lower()
+                target = query.get('Target', '').lower()
                 
-        except TrellixEPOClientError as e:
-            logger.error(f"Error retrieving user actions: {str(e)}")
+                # Prefer queries targeting audit log
+                if 'auditlog' in target.lower() or any(kw in name or kw in desc for kw in audit_keywords):
+                    qid = query.get('Id')
+                    if qid:
+                        logger.info(f"Found audit query: {query.get('Name')} (ID: {qid})")
+                        result = self.execute_query(int(qid))
+                        if result:
+                            return self._normalize_events(result, 'user_actions')
+            
+            logger.warning("No audit queries found in ePO.")
             return []
+            
         except Exception as e:
-            logger.error(f"Unexpected error retrieving user actions: {str(e)}")
+            logger.error(f"Error retrieving user actions: {str(e)}")
             return []
     
     def test_connection(self) -> tuple:

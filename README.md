@@ -3,7 +3,7 @@
 # Trellix (McAfee) ePO Splunk Technology Add-on
 
 [![Splunkbase](https://img.shields.io/badge/Splunkbase-Trellix%20ePO%20All%20in%20One-green?logo=splunk)](https://splunkbase.splunk.com/app/8351)
-[![Version](https://img.shields.io/badge/Version-1.1.2-blue)](https://github.com/sarat1kyan/TA-trellix-epo/releases)
+[![Version](https://img.shields.io/badge/Version-1.1.4-blue)](https://github.com/sarat1kyan/TA-trellix-epo/releases)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 [![CIM](https://img.shields.io/badge/CIM-4.x%20|%205.x%20|%206.x-orange)](https://docs.splunk.com/Documentation/CIM)
 
@@ -120,7 +120,7 @@ The easiest way to install this add-on is directly from Splunkbase:
 
 2. **Via Splunk CLI:**
    ```bash
-   $SPLUNK_HOME/bin/splunk install app https://splunkbase.splunk.com/app/8351/release/1.1.0/download -auth admin:password
+   $SPLUNK_HOME/bin/splunk install app https://splunkbase.splunk.com/app/8351/release/1.1.4/download -auth admin:password
    ```
 
 3. **For Splunk Cloud:**
@@ -630,7 +630,7 @@ index = security
 4. Search [Splunk Answers](https://community.splunk.com) for similar issues
 5. [Open a GitHub Issue](https://github.com/sarat1kyan/TA-trellix-epo/issues/new) with:
    - Splunk version
-   - Add-on version (1.1.0)
+   - Add-on version
    - Error messages and log excerpts
    - Sanitized configuration
 
@@ -640,18 +640,23 @@ This add-on is developed and maintained by **Mher Saratikyan**.
 
 - **Splunkbase Profile**: [Mher Saratikyan](https://splunkbase.splunk.com/apps/#/author/mher-saratikyan)
 - **GitHub**: [@sarat1kyan](https://github.com/sarat1kyan)
-5. Contact support with:
-   - Splunk version
-   - Add-on version
-   - Error messages
-   - Relevant log excerpts
-   - Configuration (sanitized)
 
 ## 📄 License
 
 This Technology Add-on is provided as-is. Please review your organization's policies regarding third-party add-ons.
 
 ## 🔄 Version History
+
+### Version 1.1.4 (2026-01-14)
+- **Splunk Cloud Compatible** - Added python.version for modular inputs
+- **Fixed modular input registration** - Script name matches scheme
+- **Improved setup experience** - Better documentation and quick start
+- See [CHANGELOG.md](CHANGELOG.md) for full details
+
+### Version 1.1.3 (2026-01-14)
+- **Bug Fix** - Fixed "No session key available" error in configure_credentials.py
+- **Improved credential script** - Now prompts for Splunk admin credentials
+- See [CHANGELOG.md](CHANGELOG.md) for full details
 
 ### Version 1.1.2 (2026-01-13)
 - **New Setup Page** - Beautiful dashboard-based configuration guide

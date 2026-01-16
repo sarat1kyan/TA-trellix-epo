@@ -85,8 +85,9 @@ class TrellixEpoInputsHandler(admin.MConfigHandler):
         # Build args dict from caller args
         args = {}
         for arg in self.callerArgs.data:
-            if self.callerArgs.data[arg][0] is not None:
-                args[arg] = self.callerArgs.data[arg][0]
+            val = self.callerArgs.data[arg]
+            if val and len(val) > 0 and val[0] is not None:
+                args[arg] = val[0]
         
         # Write to conf file
         self.writeConf(conf_file, stanza_name, args)
@@ -105,8 +106,9 @@ class TrellixEpoInputsHandler(admin.MConfigHandler):
         # Build args dict from caller args
         args = {}
         for arg in self.callerArgs.data:
-            if self.callerArgs.data[arg][0] is not None:
-                args[arg] = self.callerArgs.data[arg][0]
+            val = self.callerArgs.data[arg]
+            if val and len(val) > 0 and val[0] is not None:
+                args[arg] = val[0]
         
         # Set defaults if not provided
         if "disabled" not in args:

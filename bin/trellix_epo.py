@@ -186,10 +186,6 @@ class TrellixEPOInput(Script):
             data_type=Argument.data_type_number
         ))
         
-        # Note: "index" and "sourcetype" are reserved internal Splunk arguments
-        # They are handled automatically by Splunk and should NOT be defined here
-        # Configure them in inputs.conf instead
-        
         # Checkpoint configuration
         scheme.add_argument(Argument(
             "checkpoint_dir",
@@ -419,6 +415,10 @@ class TrellixEPOInput(Script):
             
             logger.info(f"Collected {event_count} events for input {input_name} (type: {input_type})")
             
+            # Mark app as configured on first successful collection
+            if event_count > 0:
+                self._mark_app_configured()
+            
         except TrellixEPOClientError as e:
             error_msg = f"ePO API error: {str(e)}"
             logger.error(error_msg)
@@ -565,6 +565,57 @@ class TrellixEPOInput(Script):
                 json.dump(checkpoint_data, f)
         except Exception as e:
             logger.warning(f"Failed to save checkpoint: {str(e)}")
+    
+    def _mark_app_configured(self):
+        """
+        Mark the app as configured by setting is_configured = 1 in local/app.conf.
+        This removes the setup page prompt from Splunk UI.
+        Only runs once - checks if already configured first.
+        """
+        splunk_home = os.environ.get('SPLUNK_HOME', '/opt/splunk')
+        local_dir = os.path.join(splunk_home, "etc", "apps", "TA-trellix-epo", "local")
+        app_conf_path = os.path.join(local_dir, "app.conf")
+        
+        # Check if already configured to avoid repeated writes
+        marker_file = os.path.join(local_dir, ".configured")
+        if os.path.exists(marker_file):
+            return
+        
+        try:
+            # Ensure local directory exists
+            if not os.path.exists(local_dir):
+                os.makedirs(local_dir)
+            
+            # Read existing local app.conf if it exists
+            import configparser
+            config = configparser.ConfigParser()
+            if os.path.exists(app_conf_path):
+                config.read(app_conf_path)
+            
+            # Check if already set
+            if config.has_section("install") and config.get("install", "is_configured", fallback="0") == "1":
+                # Already configured, create marker and return
+                with open(marker_file, 'w') as f:
+                    f.write("1")
+                return
+            
+            # Set is_configured = 1
+            if not config.has_section("install"):
+                config.add_section("install")
+            config.set("install", "is_configured", "1")
+            
+            # Write back
+            with open(app_conf_path, "w") as f:
+                config.write(f)
+            
+            # Create marker file
+            with open(marker_file, 'w') as f:
+                f.write("1")
+            
+            logger.info("Marked TA-trellix-epo as configured")
+            
+        except Exception as e:
+            logger.debug(f"Could not mark app as configured: {str(e)}")
 
 
 def main():

@@ -4,8 +4,10 @@
 # HTTP library for REST API interactions
 requests>=2.28.0
 
-# Splunk SDK (usually included with Splunk, but listed for reference)
-# splunk-sdk>=1.7.0
+# Splunk SDK - Required for configure_credentials.py script
+# Usually bundled with Splunk, but can be installed separately if needed:
+#   pip install splunk-sdk
+splunk-sdk>=1.7.0
 
 # Optional: For enhanced SSL/TLS support
 urllib3>=1.26.0

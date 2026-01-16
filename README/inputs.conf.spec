@@ -1,7 +1,21 @@
 # Trellix ePO Input Configuration Specification
 # This file describes the format of trellix_epo input configurations
 
+# Modular Input Type Definition
+# Required for Splunk Cloud compatibility
+[trellix_epo]
+python.version = <string>
+* Python version for modular input execution
+* Required for Splunk Cloud compatibility
+* Valid values: python3, python3.7, python3.9
+
+# Individual Input Instance Definitions
 [trellix_epo://<name>]
+# Python version for modular input execution
+# Required for Splunk Cloud compatibility
+# Valid values: python3, python3.7, python3.9
+python.version = <string>
+
 # Input type - determines what data to collect from ePO
 # Valid values: threat_events, malware_detections, host_status, agent_status,
 #               policy_compliance, quarantine_events, updates, user_actions
@@ -47,9 +61,13 @@ index = <string>
 sourcetype = <string>
 
 # Custom checkpoint directory
-# Default: ~/.splunk/checkpoints/TA-trellix-epo
+# Default: $SPLUNK_HOME/var/lib/splunk/modinputs/trellix_epo
 checkpoint_dir = <string>
 
 # Whether input is disabled
-# Default: 0 (enabled)
+# Default: 1 (disabled) - set to 0 to enable
 disabled = 0|1
+
+# Collection interval in seconds
+# This is the standard Splunk interval parameter
+interval = <integer>

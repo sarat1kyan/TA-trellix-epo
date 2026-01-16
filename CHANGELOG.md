@@ -8,6 +8,176 @@ All notable changes to the **TA-Trellix-EPO Add-on** will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.2] - 2026-01-16
+
+### Changed
+- **Dashboard: Theme changed to light** - Switched from dark to light theme for better readability
+- **Dashboard: Reorganized Executive Summary** - Now shows only metrics with actual data:
+  - Total Managed Endpoints
+  - Windows Endpoints  
+  - Linux Endpoints
+  - Managed Agents
+  - Events Ingested (24h)
+
+### Fixed
+- **Dashboard: timechart span=auto errors** - Changed all `span=auto` to `span=1h` in dashboard queries
+- **Dashboard: Field name mismatches** - Updated all queries to use actual ePO field names:
+  - `EPOComputerProperties.ComputerName` for hostname
+  - `EPOComputerProperties.IPAddress` for IP
+  - `EPOComputerProperties.OSType` for OS
+  - `EPOLeafNode.AgentVersion` for agent version
+  - `EPOLeafNode.ManagedState` for agent status (1=Managed, 0=Unmanaged)
+- **Dashboard: Agent Status showing "Unknown"** - Now derives status from `EPOLeafNode.ManagedState`
+- **Dashboard: DAT Version showing timestamps** - Renamed to "Agent Version Distribution"
+
+### Added
+- **Data Source Status Panel** - Explains which inputs need to be enabled for each section
+- **Section notices** - Each section (Threat Intelligence, Policy Compliance, User Activity, Advanced Analytics) now shows a notice explaining which inputs are required
+- **Endpoint Inventory table** - Shows hostname, IP, OS, domain, user, agent version, and last update
+- **Critical: Authentication method** - Changed from token-based to basic auth for all API requests
+  - Trellix ePO requires username:password basic auth on every request, not token-based auth
+  - Now uses `requests.auth.HTTPBasicAuth` directly instead of manual Authorization headers
+  - Removed token refresh logic that was causing 401 errors after initial authentication
+- Successfully tested with 201 hosts retrieved from production ePO server
+
+---
+
+## [1.2.1] - 2026-01-15
+
+### Fixed
+- **threat_events/malware_detections** - Auto-discovers threat-related saved queries
+- **policy_compliance** - Uses query ID 4 ("Policy Assignment Change History") as default
+- **user_actions** - Searches for audit queries targeting OrionAuditLog
+
+---
+
+## [1.2.0] - 2026-01-15
+
+### Changed
+- **Major API Rewrite** - Updated to work with actual Trellix ePO API structure
+  - ePO returns text format with `OK:` prefix, not JSON - added `_parse_text_response()`
+  - Field names have spaces (e.g., "System Name" not "computerName") - added `FIELD_MAPPINGS`
+  - Added `_normalize_record()` to convert ePO field names to CIM-compatible names
+  - Threat/malware/audit data uses saved queries via `core.executeQuery`
+  - Host/agent status uses `system.find` command
+
+### Added
+- **New API Methods**
+  - `get_available_queries()` - List all saved queries in ePO
+  - `execute_query(query_id)` - Execute a saved query by ID
+  - `_parse_query_list()` - Parse `core.listQueries` text response
+  - `_parse_text_response()` - Parse ePO text format into list of dicts
+  - `_normalize_record()` - Normalize field names using FIELD_MAPPINGS
+
+### Fixed
+- **API Compatibility** - Now works with actual ePO API structure discovered from user's server
+- **host_status** - Uses `system.find` which returns actual system data
+- **agent_status** - Uses `system.find` and derives status from Last Communication field
+
+---
+
+## [1.1.9] - 2026-01-15
+
+### Fixed
+- **Production Audit Fixes** - Comprehensive code quality improvements
+  - Fixed bare `except:` clauses in `trellix_epo_client.py` and `configure_credentials.py`
+  - Fixed `timezone.utc` reference in `utils/__init__.py` (was undefined in fallback path)
+  - Added `SPLUNKLIB_AVAILABLE` check in `main()` function before running modular input
+  - Fixed empty stanza `[]` in `default.meta` to proper `[default]` stanza
+
+---
+
+## [1.1.8] - 2026-01-15
+
+### Fixed
+- **Critical: Reserved Argument Error** - Removed `index` and `sourcetype` from modular input scheme
+  - These are reserved internal Splunk arguments that cannot be defined via introspection
+  - Fixed "Endpoint argument 'index' is an internal argument that is handled specially within Splunk"
+  - These parameters are still configurable in `inputs.conf` (handled automatically by Splunk)
+
+---
+
+## [1.1.7] - 2026-01-15
+
+### Fixed
+- **Critical: Modular Input Initialization** - Fixed "NameError: name 'Script' is not defined"
+  - Added dynamic splunklib discovery across installed Splunk apps
+  - `splunklib` is not bundled with Splunk core - searches apps like `splunk_rapid_diag`, etc.
+  - Ensures `splunklib`, `requests`, and `urllib3` modules are found
+  - Applied to all Python modules: `trellix_epo.py`, `trellix_epo_input.py`, `trellix_epo_client.py`, `trellix_epo_auth.py`
+- **Offline Splunk Servers** - No external internet required; uses Splunk's bundled Python libraries
+
+---
+
+## [1.1.5] - 2026-01-14
+
+### Fixed
+- **Splunk Cloud Vetting** - Added `[trellix_epo]` modular input type stanza with python.version
+  - The modular input type definition stanza is required in addition to instance stanzas
+  - Fixed "python.version is not specified for modular input trellix_epo" vetting error
+- **transforms.conf** - Fixed invalid multi-REGEX/FORMAT patterns (only one pair per stanza is valid)
+- **trellix_epo_auth.py** - Added graceful fallback when splunklib is not available
+- **ta_trellix_epo_rh_settings.py** - Added cross-platform SPLUNK_HOME detection for Windows
+- **ta_trellix_epo_rh_inputs.py** - Fixed potential IndexError in argument handling
+- **trellix_epo.py/trellix_epo_input.py** - Replaced bare except clause with specific exceptions
+
+### Changed
+- **inputs.conf.spec** - Added modular input type stanza documentation
+
+---
+
+## [1.1.4] - 2026-01-14
+
+### Added
+
+#### Splunk Cloud Compatibility
+- **python.version = python3** - Added to each input stanza for Cloud compatibility
+- **Updated inputs.conf.spec** - Full specification with python.version documentation
+- **Priority labels** - Added HIGH/MEDIUM/LOW priority indicators for each input type
+
+#### Enhanced Setup Experience
+- **Quick Start Wizard** - Beautiful 3-step visual guide
+- **Collapsible sections** - Advanced options hidden by default
+- **Troubleshooting FAQ** - Common issues and solutions
+- **Copy-ready commands** - Linux/macOS and Windows examples
+
+#### Enhanced Documentation
+- Improved inline comments in all configuration files
+- Better setup instructions with step-by-step guidance
+
+### Fixed
+- **Splunkbase Cloud Vetting** - Fixed "python.version is not specified for modular input" error
+- **Removed [default] stanza** - Cloud vetting doesn't allow global stanzas, moved python.version to each input
+- **Modular input registration** - trellix_epo.py script now properly named for Splunk
+
+### Changed
+- **inputs.conf** - python.version added to each individual input stanza
+- **inputs.conf.spec** - Removed [default] stanza, added interval documentation
+- **setup_page.xml** - Complete redesign with Quick Start wizard
+- **File structure** - 8 Python scripts (added trellix_epo.py entry point)
+
+---
+
+## [1.1.3] - 2026-01-14
+
+### Fixed
+
+#### Modular Input Registration
+- **Added trellix_epo.py** - Script name must match modular input scheme name
+  - Fixes "Unable to initialize modular input" error
+  - Splunk requires script name to match the scheme (trellix_epo:// → trellix_epo.py)
+
+#### Credential Configuration Script
+- **configure_credentials.py** - Fixed "No session key available" error
+  - Script now prompts for Splunk admin credentials to authenticate
+  - Uses splunklib instead of trying to read session key from stdin
+  - Added password confirmation step
+  - Added curl alternative for users without splunklib
+- **setup_page.xml** - Updated credential configuration instructions with both script and curl methods
+- **requirements.txt** - Added splunk-sdk as a dependency
+
+---
+
 ## [1.1.2] - 2026-01-13
 
 ### Added
@@ -240,6 +410,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+[1.1.7]: https://github.com/sarat1kyan/TA-trellix-epo/releases/tag/v1.1.7
+[1.1.5]: https://github.com/sarat1kyan/TA-trellix-epo/releases/tag/v1.1.5
+[1.1.4]: https://github.com/sarat1kyan/TA-trellix-epo/releases/tag/v1.1.4
+[1.1.3]: https://github.com/sarat1kyan/TA-trellix-epo/releases/tag/v1.1.3
 [1.1.2]: https://github.com/sarat1kyan/TA-trellix-epo/releases/tag/v1.1.2
 [1.1.1]: https://github.com/sarat1kyan/TA-trellix-epo/releases/tag/v1.1.1
 [1.1.0]: https://github.com/sarat1kyan/TA-trellix-epo/releases/tag/v1.1.0

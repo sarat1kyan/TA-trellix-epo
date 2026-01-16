@@ -12,11 +12,53 @@ import base64
 import logging
 import json
 import time
-from splunk.clilib.bundle_paths import make_splunkhome_path
-from splunklib import client as splunk_client
 
-# Add lib directory to path
-sys.path.insert(0, make_splunkhome_path(['etc', 'apps', 'TA-trellix-epo', 'bin']))
+# Add Splunk's Python library paths
+SPLUNK_HOME = os.environ.get('SPLUNK_HOME', '/opt/splunk')
+
+# Core Splunk Python paths (for requests, urllib3, etc.)
+splunk_lib_paths = [
+    os.path.join(SPLUNK_HOME, 'lib', 'python3.9', 'site-packages'),
+    os.path.join(SPLUNK_HOME, 'lib', 'python3.7', 'site-packages'),
+]
+for lib_path in splunk_lib_paths:
+    if os.path.isdir(lib_path) and lib_path not in sys.path:
+        sys.path.insert(0, lib_path)
+
+# Add bin directory to path
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+# splunklib is not bundled with Splunk core - look for it in apps that include it
+splunklib_search_paths = [
+    os.path.join(os.path.dirname(__file__), '..', 'lib'),  # Our own lib folder
+    os.path.join(SPLUNK_HOME, 'etc', 'apps', 'splunk_rapid_diag', 'bin'),
+    os.path.join(SPLUNK_HOME, 'etc', 'apps', 'Splunk_SA_Scientific_Python_linux_x86_64', 'lib'),
+    os.path.join(SPLUNK_HOME, 'etc', 'apps', 'splunk_secure_gateway', 'lib'),
+    os.path.join(SPLUNK_HOME, 'etc', 'apps', 'Splunk_TA_paloalto_networks', 'lib'),
+    os.path.join(SPLUNK_HOME, 'etc', 'apps', 'splunk-rolling-upgrade', 'lib'),
+    os.path.join(SPLUNK_HOME, 'etc', 'apps', 'missioncontrol', 'lib'),
+]
+
+for lib_path in splunklib_search_paths:
+    abs_path = os.path.abspath(lib_path)
+    if os.path.isdir(abs_path) and abs_path not in sys.path:
+        if os.path.isdir(os.path.join(abs_path, 'splunklib')):
+            sys.path.insert(0, abs_path)
+            break
+
+# Try to import Splunk libraries - they may not be available in all contexts
+try:
+    from splunk.clilib.bundle_paths import make_splunkhome_path
+    SPLUNK_PATHS_AVAILABLE = True
+except ImportError:
+    SPLUNK_PATHS_AVAILABLE = False
+
+try:
+    from splunklib import client as splunk_client
+    SPLUNKLIB_AVAILABLE = True
+except ImportError:
+    splunk_client = None
+    SPLUNKLIB_AVAILABLE = False
 
 import requests
 from requests.auth import HTTPBasicAuth
@@ -111,6 +153,14 @@ class TrellixEPOAuth:
         Returns:
             Tuple of (username, password) or (None, None) if not found
         """
+        if not SPLUNKLIB_AVAILABLE or not splunk_client:
+            logger.debug("splunklib not available, cannot retrieve stored credentials")
+            return (None, None)
+            
+        if not session_key:
+            logger.debug("No session key provided, cannot retrieve stored credentials")
+            return (None, None)
+            
         try:
             # Create Splunk service instance
             service = splunk_client.connect(token=session_key, app='TA-trellix-epo')
@@ -137,6 +187,12 @@ class TrellixEPOAuth:
             username: Username to store
             password: Password to store (will be encrypted)
         """
+        if not SPLUNKLIB_AVAILABLE or not splunk_client:
+            raise TrellixEPOAuthError("splunklib not available - cannot store credentials")
+            
+        if not session_key:
+            raise TrellixEPOAuthError("No session key provided - cannot store credentials")
+            
         try:
             service = splunk_client.connect(token=session_key, app='TA-trellix-epo')
             storage_passwords = service.storage_passwords
@@ -157,21 +213,21 @@ class TrellixEPOAuth:
     
     def authenticate(self, session_key=None):
         """
-        Authenticate with ePO and get/refresh token
+        Authenticate with ePO - validates credentials work
+        
+        Note: Trellix ePO uses Basic Auth for all requests.
+        This method validates credentials and optionally gets a token,
+        but the token is not required for API access.
         
         Args:
             session_key: Splunk session key (optional, for credential storage)
             
         Returns:
-            Authentication token string
+            True if authentication successful
             
         Raises:
             TrellixEPOAuthError: If authentication fails
         """
-        # Use existing token if valid
-        if self.token and self._is_token_valid():
-            return self.token
-        
         # Retrieve credentials if session_key provided
         if session_key and self.username:
             stored_user, stored_pass = self._get_stored_credentials(session_key, self.username)
@@ -183,42 +239,33 @@ class TrellixEPOAuth:
         if not self.username or not self.password:
             raise TrellixEPOAuthError("Username and password are required for authentication")
         
-        # Authenticate with ePO
+        # Test authentication with a simple API call
         try:
-            auth_url = f"{self.base_url}/core.authenticate"
-            
-            # Use basic auth for authentication endpoint
+            # Use basic auth directly - this is what ePO expects
             auth = HTTPBasicAuth(self.username, self.password)
             
-            response = self.session.post(
-                auth_url,
+            # Test with core.help - simple and always available
+            test_url = f"{self.base_url}/core.help"
+            
+            response = self.session.get(
+                test_url,
                 auth=auth,
-                params={'user': self.username},
                 timeout=30
             )
             
             response.raise_for_status()
             
-            # Parse response
-            if response.text:
-                try:
-                    result = response.json()
-                    if isinstance(result, dict) and 'result' in result:
-                        token = result['result']
-                    else:
-                        token = result if isinstance(result, str) else response.text.strip('"')
-                except json.JSONDecodeError:
-                    token = response.text.strip('"').strip("'")
-                
-                # Cache token
-                self.token = token
-                self.token_cache = token
-                self.token_expiry = time.time() + 3600  # Assume 1 hour expiry
-                
+            # If we get here, auth works
+            if response.text and response.text.startswith('OK:'):
                 logger.info("Successfully authenticated with ePO")
-                return token
+                self.token = "basic_auth"  # Mark as authenticated
+                return True
+            elif response.status_code == 200:
+                logger.info("Successfully authenticated with ePO")
+                self.token = "basic_auth"
+                return True
             else:
-                raise TrellixEPOAuthError("Empty response from authentication endpoint")
+                raise TrellixEPOAuthError("Unexpected response from ePO")
                 
         except requests.exceptions.RequestException as e:
             error_msg = f"Authentication request failed: {str(e)}"
@@ -240,23 +287,33 @@ class TrellixEPOAuth:
         """
         Get authentication headers for API requests
         
+        Trellix ePO uses Basic Auth with username:password for all requests.
+        The token from core.authenticate is optional - direct basic auth works.
+        
         Args:
-            token: Authentication token (optional, uses instance token if not provided)
+            token: Authentication token (optional, not typically used)
             
         Returns:
             Dictionary with authentication headers
         """
-        if token:
-            auth_token = token
-        elif self.token:
-            auth_token = self.token
+        # Use basic auth with username:password for all requests
+        # This is what works with Trellix ePO API
+        if self.username and self.password:
+            credentials = f"{self.username}:{self.password}"
+            encoded = base64.b64encode(credentials.encode()).decode()
+            return {
+                'Authorization': f'Basic {encoded}',
+                'Content-Type': 'application/json'
+            }
+        elif token or self.token:
+            # Fallback to token-based if no password
+            auth_token = token or self.token
+            return {
+                'Authorization': f'Basic {base64.b64encode(f"{auth_token}:".encode()).decode()}',
+                'Content-Type': 'application/json'
+            }
         else:
-            raise TrellixEPOAuthError("No authentication token available")
-        
-        return {
-            'Authorization': f'Basic {base64.b64encode(f"{auth_token}:".encode()).decode()}',
-            'Content-Type': 'application/json'
-        }
+            raise TrellixEPOAuthError("No authentication credentials available")
     
     def test_connection(self, session_key=None):
         """
