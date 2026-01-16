@@ -664,13 +664,13 @@ This Technology Add-on is provided as-is. Please review your organization's poli
 - **Improved navigation** - Direct links to setup and configuration
 - See [CHANGELOG.md](CHANGELOG.md) for full details
 
-### Version 1.1.1 (2026-01-11)
+### Version 1.1.1 (2026-01-13)
 - **Bug Fix** - Fixed 404 error on Setup page
 - **Fixed setup.xml** - Corrected REST endpoint paths and input types
 - **Fixed REST handler** - Added all configuration fields support
 - See [CHANGELOG.md](CHANGELOG.md) for full details
 
-### Version 1.1.0 (2026-01-10)
+### Version 1.1.0 (2026-01-13)
 - **Full CIM Compliance** - Added eventtypes.conf and tags.conf for complete data model integration
 - **Enhanced Dashboard** - Security Command Center with interactive drilldowns and custom styling
 - **Improved API Client** - Better error handling, retry logic, and response parsing
